@@ -152,7 +152,9 @@ BEGIN
     RETURNING di.row_id, di.detector_id, di.detector_loc;
 
 END;
-$$ LANGUAGE plpgsql;
+$$
+LANGUAGE plpgsql
+SECURITY DEFINER;
 
 ALTER FUNCTION vds.insert_detector_inventory_rows OWNER TO vds_admins;
 GRANT EXECUTE ON FUNCTION vds.insert_detector_inventory_rows TO vds_bot;
