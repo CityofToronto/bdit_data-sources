@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 from datetime import datetime, timedelta
 from functools import partial
 
@@ -19,6 +20,9 @@ from volumes.vds.py.vds_functions import (
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
 from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
 from bdit_dag_utils.utils.common_tasks import check_jan_1st, wait_for_weather_timesensor, check_if_dow
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 DAG_NAME = 'vds_pull_vdsdata'
 DAG_OWNERS = owners.get(DAG_NAME, ['Unknown'])
