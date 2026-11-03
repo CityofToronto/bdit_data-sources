@@ -7,7 +7,7 @@ SELECT
         CASE WHEN n_leg_restricted IS TRUE THEN 'N' END,
         CASE WHEN s_leg_restricted IS TRUE THEN 'S' END,
         CASE WHEN w_leg_restricted IS TRUE THEN 'W' END
-    ], NULL
+    ], NULL)
     ) AS leg,
     geom
 FROM miovision_api.active_intersections
