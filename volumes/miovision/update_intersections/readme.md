@@ -69,7 +69,7 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
 </p>
 
 6. **Restricted legs**  
-    In order to find out which leg of that intersection is restricted (**no cars approaching from that leg**), go to Google Map to find out the direction of traffic. Mark appropriate legs as `True`, and leave others as `null`.
+    In order to find out which leg of that intersection is restricted (**no car entries or exits from that leg**), go to Google Maps. Mark appropriate legs as `True`, and leave others as `null`.
 
 7. **Update Traffic Signal Info**  
     After identifying the Px number, you can grab some additional columns from `gis.traffic_signal`:
@@ -127,11 +127,11 @@ INSERT INTO miovision_api.intersection_movements_denylist (
     intersection_uid, classification_uid, movement_uid, leg
 )
 SELECT
-    restricted_leg.intersection_uid::integer,
+    restricted_legs.intersection_uid::integer,
     c.classification_uid,
     m.movement_uid,
-    restricted_leg.leg
-FROM (VALUES (95, 'W')) AS restricted_leg (intersection_uid, leg),
+    restricted_legs.leg
+FROM (VALUES (95, 'W')) AS restricted_legs (intersection_uid, leg),
 UNNEST(ARRAY[1, 3, 4, 5, 9]) AS c (classification_uid), --all vehicle types
 UNNEST(ARRAY[1, 2, 3, 4]) AS m (movement_uid)
 
@@ -145,7 +145,7 @@ SELECT
     c.classification_uid,
     mm.movement_uid,
     mm.leg
-FROM (VALUES (180, 'W')) AS restricted_leg (intersection_uid, leg)
+FROM (VALUES (180, 'W')) AS restricted_legs (intersection_uid, leg)
 --find the movements that correspond with exiting at the restricted leg
 JOIN miovision_api.movement_map AS mm
     ON mm.exit_leg = restricted_legs.leg,
