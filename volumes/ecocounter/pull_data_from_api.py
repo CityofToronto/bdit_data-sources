@@ -159,11 +159,16 @@ def truncate_and_insert(conn, token, site_id, start_date, end_date):
     #convert response into a tuple for inserting
     for flow in counts:
         volume=[]
+
+        timestamps = [ x['timestamp'] for x in flow['data']]
+        min_timestamp = min(timestamps, default=None)
+        max_timestamp = max(timestamps, default=None)
+
         for dt in flow['data']:
             row=(flow['flowID'], dt['timestamp'], dt['counts'])
             volume.append(row)
         #log and insert one flow at a time
-        LOGGER.info(f"{len(volume)} rows fetched for flow {flow['flowID']} from {start_date} to {end_date}.")
+        LOGGER.info(f"{len(volume)} rows fetched for flow {flow['flowID']} from {min_timestamp} to {max_timestamp}.")
         insertSiteCounts(conn, volume)
 
 #for testing/pulling data without use of airflow.
@@ -181,7 +186,7 @@ def run_api(
             continue
         truncate_and_insert(conn, password_getter, site['id'], start_date, end_date)
 
-def get_connections(path='/data/airflow/data_scripts/bdit_data-sources/volumes/ecocounter/.api-v2-credentials.config'):
+def get_connections(path='/data/airflow/.api-v2-credentials.config'):
     try:
         api_conn = BaseHook.get_connection('ecocounter_api_key_v2')
         password_getter = lambda: api_conn.password
