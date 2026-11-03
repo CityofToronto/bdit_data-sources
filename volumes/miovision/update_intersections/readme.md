@@ -93,7 +93,7 @@ Look at the table [`miovision_api.intersections`](../readme.md#intersections) to
 8. **Update `intersection_name`**
 Manually update `intersection_name` column in `intersections` table in format of [E / W street] / [N / S street] (ie. 'King / Bathurst'). 
 
-1. **Update geojson**  
+9. **Update geojson**  
 	Update the [geojson intersections file](../geojson/mio_intersections.geojson) using `ogr2ogr`. This geojson file is helpful as a publicly accessible record of our Miovision intersections. You will have to make an issue and commit this change. 
 
 ```bash
