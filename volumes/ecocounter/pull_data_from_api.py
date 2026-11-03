@@ -160,7 +160,7 @@ def truncate_and_insert(conn, token, site_id, start_date, end_date):
     for flow in counts:
         volume=[]
 
-        timestamps = [ x['timestamp'] for x in flow['data']]
+        timestamps = [x['timestamp'] for x in flow['data']]
         min_timestamp = min(timestamps, default=None)
         max_timestamp = max(timestamps, default=None)
 
