@@ -12,7 +12,8 @@ CREATE OR REPLACE VIEW ecocounter.sites AS (
         date_decommissioned,
         linear_name_full,
         side_street,
-        technology
+        technology,
+        bidirectional
     FROM ecocounter.sites_unfiltered
     WHERE validated
 );
