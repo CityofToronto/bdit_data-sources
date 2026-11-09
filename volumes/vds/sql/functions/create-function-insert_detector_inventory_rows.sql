@@ -4,7 +4,8 @@ CREATE OR REPLACE FUNCTION vds.insert_detector_inventory_rows()
 RETURNS TABLE (
     row_id integer,
     detector_id character varying,
-    detector_loc text
+    detector_loc text,
+    division_id smallint
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -149,7 +150,7 @@ BEGIN
     ON CONSTRAINT detector_inventory_vdsconfig_uid_entity_location_uid_divisi_key
     --so manual updates to table don't get overridden
     DO NOTHING
-    RETURNING di.row_id, di.detector_id, di.detector_loc;
+    RETURNING di.row_id, di.detector_id, di.detector_loc, di.division_id;
 
 END;
 $$
