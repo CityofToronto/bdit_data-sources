@@ -4,8 +4,7 @@ from requests import Session, exceptions
 import pendulum
 import pytz
 import dateutil.parser
-import psycopg2
-from psycopg2.extras import execute_values
+import psycopg
 import logging
 import click
 import traceback
@@ -15,7 +14,7 @@ import configparser
 
 from airflow.sdk.bases.hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.exceptions import AirflowNotFoundException
+from airflow.sdk.exceptions import AirflowNotFoundException
 
 class BreakingError(Exception):
     """Base class for exceptions that immediately halt API pulls."""
@@ -54,7 +53,7 @@ TZ = pytz.timezone("Canada/Eastern")
 
 session = Session()
 session.proxies = {}
-URL_BASE = 'https://api.miovision.one/api/v1'
+URL_BASE = 'https://api.miovision.one/api'
 
 CONTEXT_SETTINGS = dict(
     default_map={'run_api': {'flag': 0}}
@@ -116,7 +115,7 @@ class MiovPuller:
     """
     headers = {'Content-Type': 'application/json',
                'apikey': ''}
-    tmc_template = URL_BASE + "/intersections/{int_id1}/tmc"
+    tmc_template = URL_BASE + "/v2" + "/intersections/{int_id1}/tmc"
     ped_template = tmc_template + '/crosswalk'
     roaduser_class = {
         'Light': '1',
@@ -267,14 +266,13 @@ class MiovPuller:
                     + self.process_crosswalk_row(row) for row in data]
         return [(self.intersection_uid, )
                 + self.process_tmc_row(row) for row in data]
-    def process_timestamp(self, row):
-        """Miovision One API returns timestamps in UTC which needs converting to local TZ."""
-        utc_timestamp = row['timestamp']
-        if utc_timestamp is None:
+    def process_timestamp(row):
+        """Miovision One API returns timestamps in local TZ which need to be parsed."""
+        local_timestamp  = row['timestamp']
+        if local_timestamp is None:
             return None
-        utc_timestamp = dateutil.parser.parse(str(utc_timestamp))
-        #convert timestamp from utc to local TZ
-        local_timestamp = utc_timestamp.replace(tzinfo=pytz.utc).astimezone(TZ)
+        local_timestamp = dateutil.parser.parse(str(local_timestamp ))
+        # Remove TZ info and return
         return local_timestamp.replace(tzinfo=None)
     def get_intersection(self, start_time, end_time):
         """Get all data for one intersection between start and end time."""
@@ -306,7 +304,6 @@ def find_gaps(conn, time_period, intersections = None):
             if intersections is None:
                 invalid_gaps="SELECT miovision_api.find_gaps(%s::timestamp, %s::timestamp)"
                 cur.execute(invalid_gaps, time_period)
-                logger.info(conn.notices[-1])
                 logger.info('Updated gapsize table and found gaps exceeding allowable size')
             else:
                 query_params = time_period + ([x.uid for x in intersections], )
@@ -314,7 +311,7 @@ def find_gaps(conn, time_period, intersections = None):
                 cur.execute(invalid_gaps, query_params)
                 logger.info('Updated gapsize table and found gaps exceeding allowable size for intersections %s',
                             [x.uid for x in intersections]) 
-    except psycopg2.Error as exc:
+    except psycopg.Error as exc:
         logger.exception(exc)
         sys.exit(1)
 
@@ -344,7 +341,7 @@ def aggregate_15_min_mvt(
                 cur.execute(update, query_params)
                 logger.info('Aggregated intersections %s to 15 minute movement bins',
                             [x.uid for x in intersections]) 
-    except psycopg2.Error as exc:
+    except psycopg.Error as exc:
         logger.exception(exc)
         sys.exit(1)
 
@@ -369,7 +366,7 @@ def aggregate_volumes_daily(conn, time_period, intersections = None):
                 cur.execute(daily_aggregation, query_params)
                 logger.info('Aggregation into miovision_api.volumes_daily table complete for intersections %s from %s to %s.',
                             [x.uid for x in intersections], time_period[0], time_period[1])
-    except psycopg2.Error as exc:
+    except psycopg.Error as exc:
         logger.exception(exc)
         sys.exit(1)
     
@@ -396,7 +393,7 @@ def agg_zero_volume_anomalous_ranges(conn, time_period, intersections = None):
                             [x.uid for x in intersections])
             #update the table used for manual QC
             cur.execute("SELECT miovision_api.update_open_issues();")
-    except psycopg2.Error as exc:
+    except psycopg.Error as exc:
         logger.exception(exc)
         sys.exit(1)
 
@@ -413,9 +410,9 @@ def insert_data(conn, time_period, table, intersections):
             delete_sql="SELECT miovision_api.clear_volumes(%s::timestamp, %s::timestamp, %s::integer []);"
             cur.execute(delete_sql, query_params)
             insert_data = '''INSERT INTO miovision_api.volumes(intersection_uid, datetime_bin, classification_uid,
-                                leg,  movement_uid, volume) VALUES %s'''
-            execute_values(cur, insert_data, table)
-    except psycopg2.errors.UniqueViolation:
+                                leg,  movement_uid, volume) VALUES (%s, %s, %s, %s, %s, %s)'''
+            cur.executemany(insert_data, table)
+    except psycopg.errors.UniqueViolation:
         logger.warning('Duplicates detected. Exiting.')
         sys.exit(2)
 
@@ -433,7 +430,6 @@ def insert_data(conn, time_period, table, intersections):
     with conn.cursor() as cur:
         invalid_movements="SELECT miovision_api.find_invalid_movements(%s::date, %s::date)"
         cur.execute(invalid_movements, time_period)
-        logger.info(conn.notices[-1])
 
 def daterange(start_time, end_time, time_delta):
     """Generator for a sequence of regular time periods."""
@@ -449,7 +445,7 @@ def add_new_intersections(conn):
     headers = {'Content-Type': 'application/json',
            'apikey': api_key.extra_dejson['key']}
     response = session.get(
-        URL_BASE + "/intersections?pageSize=1000",
+        URL_BASE + "/v1" +"/intersections?pageSize=1000",
         params={},
         headers=headers,
         proxies=session.proxies
@@ -460,7 +456,7 @@ def add_new_intersections(conn):
     rows = [tuple(x) for x in df_api.to_numpy()] #convert to tuples for inserting
     
     insert_sql = '''
-    WITH new_ints (id, api_name, lat, lng) AS (VALUES %s),
+    WITH new_ints (id, api_name, lat, lng) AS (VALUES (%s, %s, %s, %s)),
 
     to_insert AS (
         SELECT ni.id, ni.api_name, ni.lat, ni.lng
@@ -478,8 +474,13 @@ def add_new_intersections(conn):
     RETURNING 'intersection_uid: `' || intersection_uid || '` - ' || api_name
     '''
     
-    with conn.cursor() as curr:
-        new_ints = execute_values(curr, insert_sql, rows, fetch=True)
+    with conn.cursor() as cur:
+        cur.executemany(insert_sql, rows, returning=True)
+        new_ints = []
+        while True:
+            new_ints.extend(row[0] for row in cur.fetchall())
+            if not cur.nextset():
+                break
         logger.info('New rows %s', new_ints)
     return new_ints
 
@@ -541,7 +542,7 @@ def get_intersection_info(conn, intersection=()):
                 sql_query += " ORDER BY intersection_uid DESC"
                 cur.execute(sql_query)
             intersection_list = cur.fetchall()
-    except psycopg2.Error as exc:
+    except psycopg.Error as exc:
         logger.exception(exc)
         sys.exit(1)
     return [Intersection(*x) for x in intersection_list]
@@ -640,7 +641,7 @@ def pull_data(conn, start_time, end_time, intersection, key):
                     %(c_start_t, c_end_t))
         try:
             insert_data(conn, time_period=(c_start_t, c_end_t), table=table, intersections=intersections)
-        except psycopg2.Error as exc:
+        except psycopg.Error as exc:
             logger.exception(exc)
             sys.exit(1)
     logger.info('Done pulling data.')
@@ -666,7 +667,7 @@ def get_connection(path=None):
         CONFIG.read(path)
         key = CONFIG['API']['key']
         dbset = CONFIG['DBSETTINGS']
-        conn = psycopg2.connect(**dbset)
+        conn = psycopg.connect(**dbset)
         conn.autocommit = True
         return conn, key
 

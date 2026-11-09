@@ -32,7 +32,7 @@ WITH temp AS (
     ) AS dt(datetime_bin)
     WHERE
         --0 padding for certain modes (padding)
-        im.classification_uid IN (1,2,6,10)
+        im.classification_uid IN (SELECT classification_uid FROM miovision_api.classifications WHERE zero_padded)
         AND im.intersection_uid = ANY(target_intersections)
         
     UNION ALL

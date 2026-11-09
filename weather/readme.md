@@ -11,13 +11,14 @@
   - [Backfill Data](#backfill-data)
   - [Manually Accessing Data](#manually-accessing-data)
     - [Uploading Manually Accessed Historical Data into the Database](#uploading-manually-accessed-historical-data-into-the-database)
+  - [Python Virtual Environment](#python-virtual-environment)
 
 ## Overview
 Weather has an undeniable effect on the transportation network, influencing people's behaviour, impacting capacity, and increasing the likelihood of collisions. We import two types of weather data from Environment Canada to our database, which includes historical data for both City of Toronto and Toronto Pearson Airport, and also forecast data for City of Toronto. These data are stored in the `weather` schema, maintained by `weather_admins`, and accessibile for all `bdit_humans` to view. 
 
 ## Historical Data
 
-We import the historical data for two locations on a daily basis, City of Toronto (Station_id = 31688) and Toronto Pearson Airport (Station_id = 51459). Weather data for historical weather tables are pulled from the Government of Canada's "Historical Data" weather page, found [here](https://climate.weather.gc.ca/historical_data/search_historic_data_e.html)
+We import the historical data for two locations on a daily basis, City of Toronto (Station_id = 6158355) and Toronto Pearson Airport (Station_id = 6158731). Weather data for historical weather tables are pulled from the Government of Canada's "Historical Data" weather page, found [here](https://climate.weather.gc.ca/historical_data/search_historic_data_e.html)
 
 **Please note** that the `total_rain` and `total_snow` fields for the city weather station are always `NULL`. All other fields can be accessed in the table `weather.historical_daily_city`. As an approximation, we import Toronto Pearson Airport's total rainfall and snowfall in a seperate table `weather.historical_daily_airport`. 
 
@@ -78,11 +79,11 @@ As mentioned before, only historical data can be backfilled. Other than backfill
 Input Params:
 1) `start_dt`: The start date of the date range you want to backfill historical data, inclusive. 
 2) `end_dt`: The end date of the date range you want to backfill historical data, exclusive.
-3) `station_id`: The station_id to backfill, e.g. City of Toronto is station_id = 31688 and Pearson Airport is station_id = 51459
+3) `station_id`: The station_id to backfill, e.g. City of Toronto is station_id = 6158355 and Pearson Airport is station_id = 6158731
 
 For example, if you want to backfill the entire month of 2022 March for Pearson Airport, you would run:
 ```
-python3 backfill_historical -s 2022-03-01 -e 2022-04-01 -i 51459
+python3 backfill_historical -s 2022-03-01 -e 2022-04-01 -i 6158731
 ```
 
 ## Manually Accessing Data
@@ -122,3 +123,22 @@ If the backfill process is not working, or cannot find the desired data, histori
 ![csvimport1](https://github.com/CityofToronto/bdit_data-sources/assets/10802231/2b959cb9-e39e-417f-b6b6-2a6dddea67d9)
 
 1. Navigate to the script directory in a new terminal and run the script using `python csv_import.py`
+
+## Python Virtual Environment
+
+Python 3.10 currently used for EC2 Airflow is incompatible with the latest version of env-canada package used to pull weather. The solution was to create a separate virtual environment with a newer version of python and the latest version of env-canada.
+
+Installed python 3.11 on EC2:
+```
+sudo apt install python3.11 python3.11-venv
+```
+
+Steps to create virtual environment: 
+
+```
+su - airflow
+python3.11 -m venv weather_venv
+cd ~/data_scripts/bdit_data-sources/weather/
+pip-compile requirements.in
+pip-sync requirements.txt
+```

@@ -240,6 +240,8 @@ data during gaps. When our heuristics identify `unacceptable_gaps`, then the ent
 
 A `0` value implies the process identifies the camera was working, but there was no volume for that mode. Only volumes for pedestrians, cyclists and light vehicles (`classification_uid IN (1,2,6,10)`) are filled in because those are the modes we report on more frequently. Other modes are not filled because they have much lower volumes, so the 0s would expand the size of the dataset considerably.
 
+The zero padded modes are defined through the `zero_padded` field in [`create-table-classifications.sql)`](volumes/miovision/sql/table/create-table-classifications.sql).
+
 The [`aggregate_15_min_mvt()`](function/function-aggregate-volumes_15min_mvt.sql) function performs zero-filling by cross-joining a table containing all possible movements described in ([`intersection_movements`](#intersection_movements)). The only type of movement tracked in the 1-minute volume data, but not the aggregated data, is bicycle exits (`classification_uid = 10 and movement_uid = 8`). The vendor recommended that bicycle exits not be used due to data quality concerns.
 
 **Field Name**|**Data Type**|**Description**|**Example**|
@@ -351,6 +353,9 @@ The breaks table contains `Moments in time when data collection methods changed 
 
 ### `miovision_api.anomalous_ranges`
 The `anomalous_ranges` table is used to log issues related to specific intersection / classification combos as identified either by a human or an automated process. See [below](#identifying-questionable-data-quality) for more information and examples of how to use this table. 
+
+> [!NOTE]
+> Automatically created anomalous ranges are now (via https://github.com/CityofToronto/bdit_data-sources/pull/1469) extended backward and forward from midnight to the exact minute the data stopped/resumed. This means you should write queries expecting `range_start` and `range_end` to have minute precision rather than daily level.
 
 | Column | Description |
 | ------ | ----------- |

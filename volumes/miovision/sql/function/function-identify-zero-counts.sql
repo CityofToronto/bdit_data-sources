@@ -28,9 +28,9 @@ BEGIN
         WHERE
             v15.datetime_bin >= start_date
             AND v15.datetime_bin < start_date + interval '1 day'
-            --this script will only catch zeros for classification_uid 1,2,6,10
+            --this script will only catch zeros for classification_uid with zero_padded identified in miovision_api.classifications
             --since those are the ones that are zero padded in volumes_15min_mvt_unfiltered. Filter for additional speed.
-            AND v15.classification_uid IN (1,2,6,10)
+            AND v15.classification_uid IN (SELECT classification_uid FROM miovision_api.classifications WHERE zero_padded)
             AND v15.intersection_uid = ANY(target_intersections)
         GROUP BY
             GROUPING SETS (

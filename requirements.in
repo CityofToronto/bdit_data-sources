@@ -1,17 +1,17 @@
 -c constraints.txt
 
 # Airflow
-apache-airflow[google,postgres,slack,ftp,http,fab,standard]==3.1.5
+apache-airflow[postgres,slack,ftp,http,fab,standard]==3.2.2
+apache-airflow-providers-google==19.2.0
 
 # Airflow dag list
 graphviz
 
 # Python dependency management
-pip-tools==7.5.2
+pip @ https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl#sha256=fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70
+pip-tools==7.6.2
 
 # pipelines
-# bs4==0.0.1
-# env-canada
 geopandas==1.0.1
 holidays==0.31
 requests-oauthlib

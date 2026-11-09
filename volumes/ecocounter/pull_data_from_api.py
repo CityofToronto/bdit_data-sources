@@ -2,11 +2,15 @@ import requests
 import logging
 from typing import Callable
 from configparser import ConfigParser
-from psycopg2 import connect
-from psycopg2.extras import execute_values
+from psycopg import connect
 from datetime import datetime, timedelta
-from airflow.exceptions import AirflowFailException
+from airflow.sdk.exceptions import AirflowFailException
 import time
+
+from airflow.exceptions import AirflowFailException
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.sdk.bases.hook import BaseHook
+from airflow.exceptions import AirflowNotFoundException
 
 LOGGER = logging.getLogger(__name__)
 
@@ -112,10 +116,9 @@ def truncateSiteSince(site_id: int, conn: any, startDate: datetime, endDate: dat
 
 # insert records
 def insertSiteCounts(conn: any, volume: any):
-    insert_query="INSERT INTO ecocounter.counts_unfiltered (flow_id, datetime_bin, volume) VALUES %s"
+    insert_query="INSERT INTO ecocounter.counts_unfiltered (flow_id, datetime_bin, volume) VALUES (%s, %s, %s)"
     with conn.cursor() as cur:
-        execute_values(cur, insert_query, volume)
-    return cur.query
+        cur.executemany(insert_query, volume)
 
 # insert new site record
 def insertSite(conn: any, site_id: int, site_name: str, lon: float, lat: float):
@@ -156,11 +159,16 @@ def truncate_and_insert(conn, token, site_id, start_date, end_date):
     #convert response into a tuple for inserting
     for flow in counts:
         volume=[]
+
+        timestamps = [x['timestamp'] for x in flow['data']]
+        min_timestamp = min(timestamps, default=None)
+        max_timestamp = max(timestamps, default=None)
+
         for dt in flow['data']:
             row=(flow['flowID'], dt['timestamp'], dt['counts'])
             volume.append(row)
         #log and insert one flow at a time
-        LOGGER.info(f"{len(volume)} rows fetched for flow {flow['flowID']} from {start_date} to {end_date}.")
+        LOGGER.info(f"{len(volume)} rows fetched for flow {flow['flowID']} from {min_timestamp} to {max_timestamp}.")
         insertSiteCounts(conn, volume)
 
 #for testing/pulling data without use of airflow.
@@ -169,12 +177,7 @@ def run_api(
         end_date: datetime = default_end,
         sites: any = ()
 ):
-    CONFIG_PATH = '/data/airflow/data_scripts/bdit_data-sources/volumes/ecocounter/.api-v2-credentials.config'
-    config = ConfigParser()
-    config.read(CONFIG_PATH)
-    conn = connect(**config['DBSETTINGS'])
-    conn.autocommit = True
-    password_getter = lambda: config['API']['password']
+    conn, password_getter = get_connections()
     for site in getSites(password_getter, sites=sites): #optionally specify site_ids here. 
         # only update data for sites / flows in the database
         # but announce unknowns for manual validation if necessary
@@ -182,3 +185,17 @@ def run_api(
             print('unknown site', site['id'], site['name'])
             continue
         truncate_and_insert(conn, password_getter, site['id'], start_date, end_date)
+
+def get_connections(path='/data/airflow/.api-v2-credentials.config'):
+    try:
+        api_conn = BaseHook.get_connection('ecocounter_api_key_v2')
+        password_getter = lambda: api_conn.password
+        eco_postgres = PostgresHook("ecocounter_bot")
+        conn = eco_postgres.get_conn()
+    except AirflowNotFoundException:
+        config = ConfigParser()
+        config.read(path)
+        password_getter = lambda: config['API']['password']
+        conn = connect(**config['DBSETTINGS'])
+    conn.autocommit = True
+    return conn, password_getter

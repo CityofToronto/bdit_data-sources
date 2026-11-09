@@ -11,11 +11,11 @@ import sys
 import zipfile
 import logging
 import requests
-import psycopg2
+import psycopg
 from datetime import datetime, timedelta
 
 from airflow.sdk import dag, task
-from airflow.exceptions import AirflowFailException, AirflowSkipException
+from airflow.sdk.exceptions import AirflowFailException, AirflowSkipException
 from airflow.models.taskinstance import TaskInstance
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
@@ -86,7 +86,7 @@ def gtfs_pull():
                 cur.execute(query, (last_refreshed, ))
                 feed_id = cur.fetchone()[0]
                 con.commit()
-        except psycopg2.errors.UniqueViolation:
+        except psycopg.errors.UniqueViolation:
             raise AirflowSkipException(f'This feed (last_refreshed = {last_refreshed}) has already been loaded into the database.')
             
         #feed_id is needed to update tables in `update_feed_id`

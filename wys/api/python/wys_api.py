@@ -9,9 +9,8 @@ from time import sleep
 from re import findall
 import click
 import dateutil.parser
-import psycopg2
-from psycopg2 import sql
-from psycopg2.extras import execute_values
+import psycopg
+from psycopg import sql
 from requests import Session, exceptions
 from requests.exceptions import RequestException
 
@@ -222,12 +221,12 @@ def get_data_for_date(start_date, location_ids, api_key, conn):
             cur.execute(delete_sql, {'start_date' : start_date})
             insert_sql = sql.SQL("""
                 INSERT INTO wys.raw_data (api_id, datetime_bin, speed, count)
-                VALUES %s
+                VALUES (%s, %s, %s, %s)
                 ON CONFLICT (datetime_bin, api_id, speed)
                 DO NOTHING;
             """)
-            execute_values(cur, insert_sql, speed_counts)
-    except psycopg2.Error as exc:
+            cur.executemany(insert_sql, speed_counts)
+    except psycopg.Error as exc:
         logger.critical('Error inserting speed count data')
         logger.critical(exc)
         sys.exit(1)
@@ -276,7 +275,7 @@ def agg_1hr_5kph(start_date, end_date, conn):
             logger.info('Done clearing speed counts for %s to %s.', start_date, end_date)
             cur.execute("SELECT wys.aggregate_speed_counts_one_hour_5kph(%s, %s);", params)
             logger.info('Done aggregating speed count data for %s to %s.', start_date, end_date)
-    except psycopg2.Error as exc:
+    except psycopg.Error as exc:
         logger.critical('Error aggregating data to 1-hour bins')
         logger.critical(exc)
         conn.close()
@@ -300,9 +299,17 @@ def update_locations(loc_table, conn):
     update_fpath = os.path.join(SQL_DIR, 'select-update_locations.sql')
     with open(update_fpath, 'r', encoding='utf-8') as file:
         update_locations_sql = sql.SQL(file.read())
-        
+    
+    #cannot execute multiple statements in one executemany with psycopg3 - separate create/insert
+    insert_sql = sql.SQL("""INSERT INTO daily_intersections (
+            api_id, address, sign_name, dir, start_date, loc
+        )
+        VALUES (%s, %s, %s, %s, %s, %s);
+    """)
+
     with conn.cursor() as cur:
-        execute_values(cur, daily_intersections_sql, loc_table)
+        cur.execute(daily_intersections_sql)
+        cur.executemany(insert_sql, loc_table)
         logger.info('Create and populated daily_intersections temp table.')
         cur.execute(update_locations_sql)
         logger.info('Finished updating intersections.')
@@ -334,11 +341,11 @@ def get_schedules(conn, api_key):
     with conn.cursor() as cur:
         logger.debug('Inserting '+str(len(rows))+' rows of schedules')
         schedule_sql = '''
-            INSERT INTO wys.sign_schedules_list (schedule_name, api_id) VALUES %s
+            INSERT INTO wys.sign_schedules_list (schedule_name, api_id) VALUES (%s, %s)
             ON CONFLICT (api_id) DO UPDATE SET
             schedule_name = EXCLUDED.schedule_name
             '''
-        execute_values(cur, schedule_sql, rows)
+        cur.executemany(schedule_sql, rows)
 
 if __name__ == '__main__':
     cli()

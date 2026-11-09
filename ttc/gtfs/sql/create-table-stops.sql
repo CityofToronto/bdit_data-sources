@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS gtfs.stops
 (
-    stop_id integer NOT NULL,
+    stop_id text NOT NULL,
     stop_code text COLLATE pg_catalog."default" NOT NULL,
     stop_name text COLLATE pg_catalog."default" NOT NULL,
     stop_desc text COLLATE pg_catalog."default",
