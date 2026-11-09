@@ -1,6 +1,6 @@
 -- FUNCTION: gis.text_to_centreline_geom(text, text, text, boolean)
 
-DROP FUNCTION IF EXISTS gis.text_to_centreline_geom (text, text, text, boolean);
+DROP FUNCTION IF EXISTS gis.text_to_centreline_geom(text, text, text, boolean);
 
 CREATE OR REPLACE FUNCTION gis.text_to_centreline_geom(
     _street text,
@@ -12,21 +12,36 @@ RETURNS TABLE (
     _return_geom geometry,
     _return_validation text
 )
-LANGUAGE 'plpgsql'
+LANGUAGE plpgsql
 
 COST 100
-VOLATILE 
+VOLATILE
 AS $BODY$
 
 DECLARE
     _cleaned_name text;
+	_matched_name text;
 
 BEGIN
 
---- retrieve lf_name for validation
+--- clean input street
 SELECT highway2 
 INTO _cleaned_name
 FROM gis._clean_bylaws_text(NULL, _street, NULL, NULL);
+
+--- match to centreline linear_name_full
+--- Trim directional information (N, E, S, W)
+SELECT TRIM(
+    REGEXP_REPLACE(
+        REGEXP_REPLACE(linear_name_full,
+		'\y(N|S|E|W)\y', '', 'g'),
+    '\s+', ' ', 'g'
+    )
+)	
+INTO _matched_name
+FROM gis_core.centreline_latest
+ORDER BY levenshtein(TRIM(linear_name_full), TRIM(_cleaned_name), 1, 1, 1)
+LIMIT 1;
 
 --- retrieve and treat fields from text_to_centreline
 
@@ -48,7 +63,14 @@ IF _trim THEN
 	                                 _street ,
 	                                 _from_loc ,
 	                                 _to_loc)
-	WHERE lf_name = _cleaned_name;
+	--- trim on matched name
+	WHERE TRIM(
+    	REGEXP_REPLACE(
+        	REGEXP_REPLACE(lf_name,
+			'\y(N|S|E|W)\y', '', 'g'),
+    		'\s+', ' ', 'g'
+    		)
+		) = _matched_name;
 
 --- full result
 ELSE
@@ -58,12 +80,17 @@ ELSE
 	    ST_LINEMERGE(ST_Union(line_geom)),
 	    format(
 	        '%s: %s%%',
-	        _cleaned_name,
+	        _matched_name,
 	        to_char(
 	            COALESCE(
 	                100.0 * SUM(
 	                    CASE
-	                        WHEN lf_name = _cleaned_name THEN ST_LENGTH(line_geom)
+	                        WHEN TRIM(
+    						REGEXP_REPLACE(
+        						REGEXP_REPLACE(lf_name,
+								'\y(N|S|E|W)\y', '', 'g'),
+    						'\s+', ' ', 'g')
+							) = _matched_name THEN ST_LENGTH(line_geom)
 	                        ELSE 0
 	                    END
 	                ) / NULLIF(SUM(ST_LENGTH(line_geom)), 0),
