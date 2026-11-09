@@ -9,4 +9,5 @@ SELECT
         || '`, detector_loc: `' || detector_loc || '`'
     ) AS gaps
 --insert with new row return
-FROM vds.insert_detector_inventory_rows();
+FROM vds.insert_detector_inventory_rows()
+WHERE division_id = 2;
