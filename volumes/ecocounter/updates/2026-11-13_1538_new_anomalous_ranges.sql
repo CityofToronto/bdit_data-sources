@@ -37,7 +37,7 @@ VALUES
 (
     300028433,
     tsrange('2026-09-30'::date, '2026-10-14'::date, '[]'),
-    'Strange volumes likely caused by dying or dead battery',
+    'Strange volumes likely caused by dying battery',
     'confirmed',
     'do-not-use'
 );
