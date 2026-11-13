@@ -230,16 +230,25 @@ extension_lines AS (
         ) AS extended_line
     FROM far_points f
 ),
-
+extension_azimuths AS (
+    SELECT
+        *,
+        DEGREES(ST_Azimuth(
+            ST_StartPoint(ST_Transform(extended_line, 2952)),
+            ST_EndPoint(ST_Transform(extended_line, 2952))
+        )) AS az_deg
+    FROM extension_lines
+),
 extension_pairs AS (
     SELECT
         a.road_line_id,
         a.original_geom,
         a.touch_pt,
 		-- find where extended line meets 
-        ST_Intersection(a.extended_line, b.extended_line) AS meet_pt
-    FROM extension_lines a
-    JOIN extension_lines b ON  a.curve_line_id = b.curve_line_id
+        ST_Intersection(a.extended_line, b.extended_line) AS meet_pt,
+		ABS(a.az_deg - b.az_deg) AS raw_diff_deg
+     FROM extension_azimuths a
+    JOIN extension_azimuths b ON  a.curve_line_id = b.curve_line_id
       AND a.int_id = b.int_id -- of the same intersection only
     WHERE a.road_line_id != b.road_line_id
 )
@@ -247,7 +256,8 @@ extension_pairs AS (
 SELECT DISTINCT ON (road_line_id, touch_pt)
     road_line_id,
     original_geom,
-    ST_MakeLine(touch_pt, meet_pt) AS extension
+    ST_MakeLine(touch_pt, meet_pt) AS extension,
+	LEAST(raw_diff_deg, 360 - raw_diff_deg) AS angle_deg
 FROM extension_pairs
  -- make sure the extended lines only touches once
  -- and the intersected point is actually a point 
@@ -255,6 +265,9 @@ FROM extension_pairs
  -- or line (extended lines are in parrarell and intersection is a line)
 WHERE GeometryType(meet_pt) = 'POINT'
 ORDER BY road_line_id, touch_pt;
+
+CREATE INDEX curb_extensions_geom_2952_idx
+    ON gis.curb_extensions USING gist (ST_Transform(extension, 2952));
 
 CREATE TABLE gis.curb_extended AS
 -- union the extended portion and the original line
@@ -308,26 +321,94 @@ SELECT line_id, geom, source FROM untouched_roads
 UNION ALL
 SELECT line_id, geom, source FROM straight_intersections;
 
----clean
-select * FROM natalie.edge_result
-where line_id not in (
+CREATE INDEX curb_extended_geom_2952_idx
+    ON gis.curb_extended USING gist (ST_Transform(geom, 2952));
+
+-----------------------------------------------------------
+-- CLEANING
+-----------------------------------------------------------
+-- remove odd lines that are resulted from medians
+DELETE FROM gis.curb_extended
+where line_id  in (
     SELECT line_id
-    FROM natalie.edges
+    FROM gis.curb_all_edges
     WHERE polytype = 'Road Edge'
       AND ST_Distance(ST_StartPoint(geom_proj), ST_EndPoint(geom_proj)) < 6   -- start and end point is close
       AND ST_Length(geom_proj) > 5 * ST_Distance(ST_StartPoint(geom_proj), ST_EndPoint(geom_proj))  --but the line is like 5 times longer
+);
+
+-- remove the lines they are duplicated
+-- essentially the lines that are not curb lines 
+DELETE FROM gis.curb_extended
+WHERE line_id IN (
+    SELECT a.line_id
+    FROM gis.curb_extended a
+    JOIN gis.curb_extended b
+      ON  a.line_id <> b.line_id
+      AND a.source <> b.source
+      AND ST_DWithin(ST_Transform(a.geom, 2952), ST_Transform(b.geom, 2952), 0.5)
+    WHERE a.source <> 'extended'
+      AND b.source <> 'extended'
+      AND ST_HausdorffDistance(ST_Transform(a.geom, 2952), ST_Transform(b.geom, 2952)) < 0.5 -- simliar in geometry
+);
+
+
+-----------------------------------------------
+-- Confidence Level
+-----------------------------------------------
+ALTER TABLE gis.curb_extended
+ADD COLUMN IF NOT EXISTS confidence_level text;
+
+
+-- Update confidence level 
+WITH extension_checks AS (
+    SELECT
+        ex.road_line_id,
+        ex.angle_deg,
+        (
+         SELECT count(*)
+         FROM gis.curb_extended o --figure out overlapping extended lines
+         WHERE o.line_id != ex.road_line_id
+            AND ST_Intersects(ST_Transform(ex.extension, 2952), ST_Transform(o.geom, 2952)) -- where intersect
+              AND ( ST_Crosses(ST_Transform(ex.extension, 2952), ST_Transform(o.geom, 2952)) -- crosses
+                   OR ST_Overlaps(ST_Transform(ex.extension, 2952), ST_Transform(o.geom, 2952))) -- OR overlap (like on top of each other)
+              AND ST_Distance(
+                      ST_StartPoint(ST_Transform(ex.extension, 2952)),
+                      ST_Intersection(ST_Transform(ex.extension, 2952), ST_Transform(o.geom, 2952))
+                  ) > 1.5 -- except the start and end point that might be touching
+        ) AS n_overlaps
+    FROM gis.curb_extensions ex
+),
+
+extension_confidence AS (
+    SELECT
+        road_line_id,
+        CASE
+            WHEN n_overlaps > 0   THEN 0
+            WHEN angle_deg >= 75 and angle_deg <= 105 THEN 3 --90degree ish should be pretty good
+            WHEN angle_deg >= 45 AND angle_deg <= 135 THEN 2 -- not as 90 degree but should be ok 
+            ELSE 1 -- too small of an angle probably?
+        END AS confidence_rank
+    FROM extension_checks
+),
+
+-- a road line extended at both ends has two extensions
+-- the road line gets the lower confidence of the two
+road_confidence AS (
+    SELECT
+        road_line_id,
+        MIN(confidence_rank) AS confidence_rank
+    FROM extension_confidence
+    GROUP BY road_line_id
 )
 
-
-CREATE table natalie.edge_dups AS 
-SELECT
-    a.line_id AS line_a, a.source AS source_a,
-    b.line_id AS line_b, b.source AS source_b,
-	a.geom as geom_a, b.geom as geom_b
-FROM natalie.edge_result a
-JOIN natalie.edge_result b
-  ON a.line_id < b.line_id  
- AND a.source <> b.source
- AND ST_DWithin(ST_Transform(a.geom, 2952), ST_Transform(b.geom, 2952), 0.5)
-where a.source != 'extended' and b.source != 'extended' 
-AND ST_HausdorffDistance(ST_Transform(a.geom, 2952), ST_Transform(b.geom, 2952)) < 0.5 -- simliar in geometry
+UPDATE gis.curb_extended e
+SET confidence_level = CASE c.confidence_rank
+        WHEN 3 THEN 'high'
+        WHEN 2 THEN 'medium'
+        WHEN 1 THEN 'low'
+        ELSE 'very low' -- the overlapping ones
+    END
+FROM road_confidence c
+WHERE e.line_id = c.road_line_id
+  AND e.source = 'extended';
