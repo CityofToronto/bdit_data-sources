@@ -8,8 +8,8 @@ INSERT INTO ecocounter.anomalous_ranges (
 VALUES
 (
     300044518,
-    tsrange('2026-10-01'::date, NULL, '[)'),
-    'suspiciously low volumes in only one direction. Possibly due to construction',
+    tsrange('2026-10-25'::date, NULL, '[)'),
+    'Suspiciously low or near-zero volumes reported by all flows installed in the Eastbound lane.',
     'suspect',
     'do-not-use'
 ),
