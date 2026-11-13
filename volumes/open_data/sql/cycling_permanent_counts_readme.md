@@ -10,9 +10,10 @@ This table contains the locations and metadata about each permanent bicycle coun
 |-------------------------------|:-----------:|--------------------------------------:|-------------------------------------------------------------|
 | location_dir_id            | integer        | 1 | Unique ID for location and direction for joining to data tables. |
 | location_name            | text        | Bloor St E, West of Castle Frank Rd (retired) | Short description of sensor location. |
-| direction                | text        | Eastbound                                     | Closest cardinal direction associated with the bike volume. |
+| direction                | text        | Eastbound                                     | Closest cardinal direction associated with the bike volume. When bidirectional=True, this refers to the direction in which cyclists are traveling. When bidirectional=False, this refers to the direction of travel for the lane in which the detector is situated, typically determined by the side of the road or path on which the detector is located. |
 | linear_name_full         | text        | Bloor St E                                    | Full street name of flow from Toronto Centreline (TCL) |
 | side_street              | text        | Castle Frank Rd                               | Nearest side street to sensor flow. |
+| bidirectional            | boolean     | False                                       |  Indicates whether opposing directions share the same path (True) or are separated by distance or a physical barrier (False) |
 | longitude                | float     | -79.3681194                                   | Approximate longitude of sensor. |
 | latitude                 | float     | 43.6738047                                    | Approximate latitude of sensor. |
 | centreline_id            | integer     | 8540609                                       | `centreline_id` corresponding to [Toronto Centreline (TCL)](https://open.toronto.ca/dataset/toronto-centreline-tcl/) |
@@ -34,7 +35,7 @@ Daily cycling and micromobility volumes by location and direction.
 |------------------|:---------:|----------------------------------------------:|------------------------------------------|
 | location_dir_id            | integer        | 1 | Unique ID for location and direction for joining to `cycling_permanent_counts_locations`. |
 | location_name    | text                        | Bloor St E, West of Castle Frank Rd (retired) | Short description of sensor location.                                                        |
-| direction        | text                        | Westbound                                     | Closest cardinal direction associated with the bike volume.                                                    |
+| direction        | text                        | Westbound                                     | Closest cardinal direction associated with the bike volume. When bidirectional=True, this refers to the direction in which cyclists are traveling. When bidirectional=False, this refers to the direction of travel for the lane in which the detector is situated, typically determined by the side of the road or path on which the detector is located.                                                    |
 | linear_name_full         | text        | Bloor St E                                    | Full street name of flow from Toronto Centreline (TCL) |
 | side_street              | text        | Castle Frank Rd                               | Nearest side street to sensor flow. |
 | dt               | date      | 06/26/1994                                    | Date of count.                           |

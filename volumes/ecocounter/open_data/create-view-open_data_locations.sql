@@ -19,6 +19,7 @@ SELECT DISTINCT ON (s.site_description, od.direction::text)
     od.direction,
     s.linear_name_full,
     s.side_street,
+    s.bidirectional,
     ROUND(st_x(s.geom)::numeric, 7) AS lng,
     ROUND(st_y(s.geom)::numeric, 7) AS lat,
     s.centreline_id,
