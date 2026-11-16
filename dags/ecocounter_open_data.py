@@ -18,7 +18,7 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_owners import owners
-    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, send_slack_msg, get_readme_docmd
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, send_slack_msg, get_readme_docmd
     from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
 except ModuleNotFoundError:
     raise ImportError("Cannot import DAG helper functions.")
@@ -93,6 +93,17 @@ def ecocounter_open_data_dag():
     wait_till_10th.doc_md = """
     Wait until the 10th day of the month to export data. Alternatively mark task as success to proceed immediately.
     """
+
+    @task()
+    def check_anomalous_ranges():
+        SQLCheckOperatorWithReturnValue(
+            task_id="check_site_outages",
+            sql=f"SELECT * FROM ecocounter.open_data_anomalous_ranges_check()",
+            conn_id="ecocounter_bot",
+        )
+    check_anomalous_ranges.doc_md = '''
+    Flag any counts in the open_data tables which fall within ecocounter.anomalous_ranges
+    '''
     
     @task()
     def get_years(ds=None):
