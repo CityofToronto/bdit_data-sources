@@ -65,7 +65,7 @@ def ksi_opan_data():
         check_deleted_collision = SQLExecuteQueryOperator(
             task_id="check_deleted_collision",
             sql='''
-                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted collision_id comparing to last updated.  '||
+                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted collision record compared to last update.  '||
                     '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing
                     FROM(
                     SELECT DISTINCT collision_id FROM open_data.ksi
@@ -78,7 +78,7 @@ def ksi_opan_data():
         check_missing_person = SQLExecuteQueryOperator(
             task_id="check_missing_person",
             sql='''
-                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted collision person pair comparing to last updated.  '||
+                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' deleted involved person record compared to last update.  '||
                     '\n```'||ARRAY_TO_STRING(array_agg(collision_id||' ['||per_no||']'), ', ')||'```' AS missing
                     FROM(
                     SELECT DISTINCT collision_id, per_no FROM open_data.ksi
@@ -120,7 +120,7 @@ def ksi_opan_data():
         check_dup_person = SQLExecuteQueryOperator(
             task_id="check_dup_person",
             sql='''
-                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' duplicated collision + person pair,  '||
+                    SELECT COUNT(*) = 0 AS _check, 'There are '|| count(*) ||' duplicated involved person record,  '||
                     '\n```'||ARRAY_TO_STRING(array_agg(collision_id||' ['||per_no||']'), ', ')||'```' AS missing
                     FROM(
                     SELECT collision_id, per_no, count(1)
@@ -136,7 +136,7 @@ def ksi_opan_data():
             task_id="check_incorrect_fatalno",
             sql='''
                 SELECT COUNT(*) = 0 AS _check, 
-                    'There are '|| count(*) ||'collision_id with either repeated or skipped fatal_bno'||
+                    'There are '|| count(*) ||'collision_id with repeated or skipped fatal_no'||
                                     '\n```'||ARRAY_TO_STRING(array_agg(collision_id), ', ')||'```' AS missing 
                 FROM (
                 SELECT collision_id, 
