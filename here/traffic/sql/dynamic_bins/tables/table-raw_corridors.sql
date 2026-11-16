@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS here_agg.raw_corridors
     time_grp timerange NOT NULL,
     bin_range tsrange NOT NULL,
     tt real,
-    num_obs integer,
+    num_obs real,
     uri_string text COLLATE pg_catalog."default",
     dt date,
     hr smallint,

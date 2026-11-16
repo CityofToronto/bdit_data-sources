@@ -1,6 +1,6 @@
 -- FUNCTION: here_agg.return_dynamic_bins(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean) --noqa: LT05
 
--- DROP FUNCTION IF EXISTS here_agg.return_dynamic_bins(text, date, date, time without time zone, time without time zone, integer[], bigint, bigint, boolean); --noqa: LT05
+--DROP FUNCTION here_agg.return_dynamic_bins(date,date,time without time zone,time without time zone,integer[],bigint,bigint,boolean);
 
 CREATE OR REPLACE FUNCTION here_agg.return_dynamic_bins(
     start_date date,
@@ -18,7 +18,7 @@ RETURNS TABLE (
     corridor_id smallint,
     bin_range tsrange,
     tt real,
-    num_obs integer,
+    num_obs real,
     hr smallint
 )
 LANGUAGE plpgsql
@@ -40,7 +40,7 @@ CREATE TEMPORARY TABLE raw_corridors_temp (
     time_grp timerange NOT NULL,
     bin_range tsrange NOT NULL,
     tt real,
-    num_obs integer,
+    num_obs real,
     hr smallint GENERATED ALWAYS AS (date_part('hour', lower(bin_range) + (upper(bin_range) - lower(bin_range))/2)) STORED,
     CONSTRAINT raw_corridors_exclude_temp EXCLUDE USING gist (
         bin_range WITH &&,
