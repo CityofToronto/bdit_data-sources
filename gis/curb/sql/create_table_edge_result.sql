@@ -349,7 +349,8 @@ WHERE line_id IN (
       AND ST_DWithin(ST_Transform(a.geom, 2952), ST_Transform(b.geom, 2952), 0.5)
     WHERE a.source <> 'extended'
       AND b.source <> 'extended'
-      AND ST_HausdorffDistance(ST_Transform(a.geom, 2952), ST_Transform(b.geom, 2952)) < 0.5 -- simliar in geometry
+      AND 
+      ST_HausdorffDistance(ST_Transform(a.geom, 2952), ST_Transform(b.geom, 2952)) < 0.5 -- simliar in geometry
 );
 
 
@@ -361,10 +362,61 @@ ADD COLUMN IF NOT EXISTS confidence_level text;
 
 
 -- Update confidence level 
-WITH extension_checks AS (
+
+with merged_lines AS (
+    SELECT
+        line_id,
+        ST_Transform(geom, 2952) AS geom_2952, 
+        ST_Length(ST_Transform(geom, 2952)) AS len_m -- grab length
+    FROM gis.curb_extended
+    WHERE source = 'extended'
+      AND GeometryType(geom) = 'LINESTRING' -- skip lines that can't be merged into one in the previous steps
+
+),
+
+
+merged_points AS (
+    SELECT
+        line_id,
+        ST_LineInterpolatePoint(geom_2952, 0) AS start_pt,
+        ST_LineInterpolatePoint(geom_2952, LEAST(1, 10.0 / len_m)) AS start_10m,
+        ST_LineInterpolatePoint(geom_2952, LEAST(1, 15.0 / len_m)) AS start_15m,
+        ST_LineInterpolatePoint(geom_2952, LEAST(1, 25.0 / len_m)) AS start_25m,
+        ST_LineInterpolatePoint(geom_2952, 1) AS end_pt,
+        ST_LineInterpolatePoint(geom_2952, GREATEST(0, (len_m - 10.0) / len_m)) AS end_10m,
+        ST_LineInterpolatePoint(geom_2952, GREATEST(0, (len_m - 15.0) / len_m)) AS end_15m,
+        ST_LineInterpolatePoint(geom_2952, GREATEST(0, (len_m - 25.0) / len_m)) AS end_25m
+    FROM merged_lines
+),
+
+-- compare 0~10 to 15~25
+-- and see if their directionality is very different
+-- use angle of the differences to number confidence
+merged_headings AS (
+    SELECT
+        line_id,
+        DEGREES(ST_Azimuth(start_10m, start_pt))  AS start_last_deg,
+        DEGREES(ST_Azimuth(start_25m, start_15m)) AS start_before_deg,
+        DEGREES(ST_Azimuth(end_10m, end_pt))      AS end_last_deg,
+        DEGREES(ST_Azimuth(end_25m, end_15m))     AS end_before_deg
+    FROM merged_points
+),
+
+merged_bends AS (
+    SELECT
+        line_id,
+        GREATEST( -- largest odd angle 
+            LEAST(ABS(start_last_deg - start_before_deg), 360 - ABS(start_last_deg - start_before_deg)),
+            LEAST(ABS(end_last_deg - end_before_deg),     360 - ABS(end_last_deg - end_before_deg))
+        ) AS bend_deg
+    FROM merged_headings
+),
+
+extension_checks AS (
     SELECT
         ex.road_line_id,
         ex.angle_deg,
+        k.bend_deg,
         (
          SELECT count(*)
          FROM gis.curb_extended o --figure out overlapping extended lines
@@ -378,6 +430,8 @@ WITH extension_checks AS (
                   ) > 1.5 -- except the start and end point that might be touching
         ) AS n_overlaps
     FROM gis.curb_extensions ex
+     LEFT JOIN merged_bends k ON k.line_id = ex.road_line_id
+
 ),
 
 extension_confidence AS (
@@ -385,7 +439,8 @@ extension_confidence AS (
         road_line_id,
         CASE
             WHEN n_overlaps > 0   THEN 0
-            WHEN angle_deg >= 75 and angle_deg <= 105 THEN 3 --90degree ish should be pretty good
+            WHEN bend_deg > 5    THEN 1 -- trial and error arbitrary  number 
+            WHEN angle_deg >= 75 and angle_deg <= 105 THEN 3 --90 degree ish should be pretty good
             WHEN angle_deg >= 45 AND angle_deg <= 135 THEN 2 -- not as 90 degree but should be ok 
             ELSE 1 -- too small of an angle probably?
         END AS confidence_rank
