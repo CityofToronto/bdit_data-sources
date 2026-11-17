@@ -20,6 +20,7 @@ WITH links AS MATERIALIZED (
 SELECT
     ta.tx,
     SUM(l.proportion_of_length) AS proportion_of_length,
+    SUM(l.len / ta.harmonic_mean * 3.6) / SUM(l.proportion_of_length) AS adjusted_tt,
     'link_dir, proportion_of_length, tt' || chr(10) ||
     string_agg(
         ta.link_dir || ',' ||
@@ -65,3 +66,39 @@ results AS (
 (SELECT * FROM expected_results EXCEPT SELECT * FROM results)
 UNION ALL
 (SELECT * FROM results EXCEPT SELECT * FROM expected_results);
+
+
+--travel time app gives result of 58.7 vs 65.328 for harmonic mean above. Check if this is just a mean vs harmonic mean discrepency.
+--time_mean = 58.7 - https://trans-bdit.intra.prod-toronto.ca/tt-request-backend/aggregate-travel-times/30334262/30334233/7/8/2023-12-13/2023-12-14/true/1234567
+--time_mean = 52.19618735 - below (59.83260903, 43.28037237, 32.10521177, 73.56655622)
+--does not match!
+
+--get the data to manually verify.
+WITH links AS MATERIALIZED (
+    SELECT
+        cl.link_dir,
+        cl.length AS len,
+        cl.length / SUM(cl.length) OVER () AS proportion_of_length
+    --edit the map version here if neccessary based on the corridor selected
+    FROM congestion.congestion_links AS cl
+    WHERE ver_id = '24_4' AND segment_id = 2
+)
+
+SELECT
+    ta.tx,
+    SUM(l.proportion_of_length) AS proportion_of_length,
+    SUM(l.len / ta.mean * 3.6) / SUM(l.proportion_of_length) AS adjusted_tt,
+    'link_dir, proportion_of_length, tt' || chr(10) ||
+    string_agg(
+        ta.link_dir || ',' ||
+        l.proportion_of_length || ',' ||
+        l.len / ta.mean * 3.6, --tt
+        chr(10)
+    ) AS ta_data
+FROM here.ta_path AS ta
+JOIN links AS l USING (link_dir)
+WHERE
+    tx >= '2023-12-13 07:00:00'
+    AND tx < '2023-12-13 08:00:00'
+GROUP BY tx
+ORDER BY tx;
