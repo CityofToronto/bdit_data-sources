@@ -104,6 +104,17 @@ def ecocounter_open_data_dag():
     check_anomalous_ranges.doc_md = '''
     Flag any counts in the open_data tables which fall within ecocounter.anomalous_ranges
     '''
+
+    @task()
+    def check_previous_years():
+        SQLCheckOperatorWithReturnValue(
+            task_id="check_previous_years",
+            sql=f"SELECT * FROM ecocounter.open_data_previous_years_check()",
+            conn_id="ecocounter_bot",
+        )
+    check_anomalous_ranges.doc_md = '''
+    Flag any changes which occured in the last month and would require the DAG to be run for previous years
+    '''
     
     @task()
     def get_years(ds=None):
@@ -225,6 +236,7 @@ def ecocounter_open_data_dag():
         check_data_availability >>
         reminder_message() >>
         check_anomalous_ranges() >>
+        check_previous_years() >>
         wait_till_10th >> [
             insert_and_download_data.expand(yr = yrs),
             output_readme()
