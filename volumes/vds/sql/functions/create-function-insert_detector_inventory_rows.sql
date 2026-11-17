@@ -89,14 +89,15 @@ BEGIN
                 WHEN comms.source_id ILIKE '%houston radar%' THEN 'Radar'
                 WHEN dtypes.det_type = 'RESCU Detectors' THEN 'Inductive'
             END AS det_tech
-    FROM vds.last_active AS pairs
+    FROM gwolofs.detector_inventory AS pairs
     LEFT JOIN vds.vdsconfig AS c
         ON pairs.vdsconfig_uid = c.uid
     LEFT JOIN vds.entity_locations AS e
         ON pairs.entity_location_uid = e.uid
     LEFT JOIN vds.centreline_vds AS cl_vds
         ON cl_vds.vdsconfig_uid = pairs.vdsconfig_uid
-    LEFT JOIN gis_core.centreline_latest AS cl USING (centreline_id)
+    LEFT JOIN gis_core.centreline_latest AS cl
+        ON cl.centreline_id = cl_vds.centreline_id
     LEFT JOIN vds.config_comms_device AS comms
         ON comms.fss_id = c.fss_id
         AND comms.division_id = c.division_id
@@ -133,6 +134,8 @@ BEGIN
                     WHEN comms.source_id ILIKE '%smartmicro%' THEN 'Smartmicro Sensors'
                 END AS det_type
             ) AS dtypes
+    --a way of identifying only new rows that haven't been inserted before by this function
+    WHERE pairs.detector_loc IS NULL
     ORDER BY
         pairs.vdsconfig_uid ASC,
         pairs.entity_location_uid ASC,
@@ -141,7 +144,20 @@ BEGIN
     ON CONFLICT
     ON CONSTRAINT detector_inventory_vdsconfig_uid_entity_location_uid_divisi_key
     --so manual updates to table don't get overridden
-    DO NOTHING
+    DO UPDATE SET
+        detector_id = EXCLUDED.detector_id,
+        detector_loc = EXCLUDED.detector_loc,
+        sensor_geom = EXCLUDED.sensor_geom,
+        centreline_id = EXCLUDED.centreline_id,
+        centreline_geom = EXCLUDED.centreline_geom,
+        det_type = EXCLUDED.det_type,
+        det_loc = EXCLUDED.det_loc,
+        det_group = EXCLUDED.det_group,
+        direction = EXCLUDED.direction,
+        expected_bins = EXCLUDED.expected_bins,
+        comms_desc = EXCLUDED.comms_desc,
+        det_tech = EXCLUDED.det_tech
+    --returns the newly updated rows
     RETURNING di.row_id, di.detector_id, di.detector_loc, di.division_id;
 
 END;

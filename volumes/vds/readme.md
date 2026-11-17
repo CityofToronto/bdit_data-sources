@@ -17,7 +17,6 @@
     - [vds.entity\_locations](#vdsentity_locations)
     - [`vds.config_comms_device`](#vdsconfig_comms_device)
     - [`vds.centreline_vds`](#vdscentreline_vds)
-    - [`vds.last_active`](#vdslast_active)
   - [Aggregate Tables](#aggregate-tables)
     - [vds.counts\_15min](#vdscounts_15min)
     - [vds.counts\_15min\_bylane](#vdscounts_15min_bylane)
@@ -153,7 +152,8 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 
 ### vds.detector_inventory
 **The main table for filtering and identifying VDS/RESCU sensors locations.**
-This view draws info from the various config tables to make it easier to explore and filter VDS sensors. It contains all the combinations of `vdsconfig_uid` and `entity_location_uid` **which have produced data** to date. These dates are updated daily via Airflow `vds_pull_vdsdata` DAG.   
+This table draws info from the various config tables to make it easier to explore and filter VDS sensors. It contains all the combinations of `vdsconfig_uid` and `entity_location_uid` **which have produced data** to date. Table is maintained daily by the `vds_pull_vdsdata` DAG which inserts new sensors/updates dates during the [insert](sql/insert/insert_raw_vdsdata.sql) into `vds.raw_vdsdata` and updates other details with the `vds.insert_detector_inventory_rows` function. 
+
 Use the geoms and `first_active` and `last_active` fields in this view to select your sensors and then join to `counts_15min USING (vdsconfig_uid, entity_location_uid)`. 
 - Criteria for manual fields are defined within case statements [here](<sql/views/create-view-detector_inventory.sql>).  
 - If you add new rules to `expected_bins` to reflect new sensor types, see the heading `New sensor type added?` or `Sensor type incorrectly classified?` under [Data Ops](#data-ops-something-went-wrong-predictably-how-do-i-fix-it) heading. 
@@ -175,8 +175,8 @@ Row count: 11,558
 | sensor_geom | geom    | | geom from `vds.entity_locations` |  
 | centreline_id | integer |  | `centreline_id` from `vds.centreline_vds` | 
 | centreline_geom | geom    |  | geom from `gis_core.centreline_latest` | 
-| first_active | timestamp  | | first timestamp the sensor produced data |
-| last_active | timestamp  | | last timestamp the sensor has produced data to date | 
+| first_active | timestamp  | | First timestamp with data for this combindation of vdsconfig_uid / entity_location_uid. |
+| last_active | timestamp  | | Last timestamp with data for this combindation of vdsconfig_uid / entity_location_uid. | 
 
 ### vds.vdsconfig
 This table contains details about vehicle detectors pulled from ITSC `public.vdsconfig`. For more information or help interpreting these fields you can search the web interface for [ITS Central](https://itscentral.corp.toronto.ca/Vds/). 
@@ -273,19 +273,6 @@ Row count: 392
 |:----------------|:----------------------------|:---------------------------|-----------:|
 | centreline_id     | bigint                    |                           | |
 | vdsconfig_uid     | integer                    |                           | |
-
-### `vds.last_active`
-A table updated daily during the [insert](sql/insert/insert_raw_vdsdata.sql) into `vds.raw_vdsdata` to maintain an up to date list of sensor first and last active dates. See instead `vds.detector_inventory` which contains additional sensor details. 
-
-Row count: 11,558
-| column_name     | data_type                   | sample                     |   Comments |
-|:----------------|:----------------------------|:---------------------------|-----------:|
-| detector_uid | integer                    |                           | |
-| division_id | smallint                    |                           | |
-| vdsconfig_uid | integer                    |                           | |
-| entity_location_uid | integer                    |                           | |
-| first_active | timestamp without time zone  |                           | First timestamp with data for this combindation of vdsconfig_uid / entity_location_uid. |
-| last_active | timestamp without time zone |                           | Last timestamp with data for this combindation of vdsconfig_uid / entity_location_uid. |
 
 ## Aggregate Tables
 

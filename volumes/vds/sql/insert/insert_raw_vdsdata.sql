@@ -6,7 +6,7 @@ WITH inserted AS (
     RETURNING division_id, vdsconfig_uid, entity_location_uid, dt
 )
 
-INSERT INTO vds.last_active AS la (
+INSERT INTO gwolofs.detector_inventory AS di (
     division_id, vdsconfig_uid, entity_location_uid, first_active, last_active
 )
 SELECT
@@ -22,7 +22,7 @@ GROUP BY
     division_id,
     vdsconfig_uid,
     entity_location_uid
-ON CONFLICT (vdsconfig_uid, entity_location_uid, division_id)
+ON CONFLICT ON CONSTRAINT detector_inventory_vdsconfig_uid_entity_location_uid_divisi_key
 DO UPDATE SET
-first_active = LEAST(excluded.first_active, la.first_active),
-last_active = GREATEST(excluded.last_active, la.last_active);
+first_active = LEAST(excluded.first_active, di.first_active),
+last_active = GREATEST(excluded.last_active, di.last_active);
