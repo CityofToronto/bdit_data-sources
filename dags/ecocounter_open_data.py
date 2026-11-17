@@ -50,7 +50,7 @@ default_args = {
     'email_on_success': False,
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
-    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
+    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = False),
 }
 
 @dag(
@@ -80,7 +80,7 @@ def ecocounter_open_data_dag():
         send_slack_msg(
             context=context,
             msg=f"{list_names} Remember to check Ecocounter :open_data_to: for {mnth} and label any sites pending validation in anomalous_ranges. :meow_detective:",
-            use_proxy=True
+            use_proxy=False
         )
 
     wait_till_10th = DateTimeSensor(
@@ -94,25 +94,23 @@ def ecocounter_open_data_dag():
     Wait until the 10th day of the month to export data. Alternatively mark task as success to proceed immediately.
     """
 
-    @task()
-    def check_anomalous_ranges():
-        SQLCheckOperatorWithReturnValue(
+    check_anomalous_ranges = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=partial(slack_alert_data_quality, channel="slack_prj_permanent_sensors"),
             task_id="check_anomalous_ranges",
-            sql=f"SELECT * FROM ecocounter.open_data_anomalous_ranges_check()",
+            sql=f"SELECT * FROM dboucau.open_data_anomalous_ranges_check()",
             conn_id="ecocounter_bot",
         )
     check_anomalous_ranges.doc_md = '''
     Flag any counts in the open_data tables which fall within ecocounter.anomalous_ranges
     '''
 
-    @task()
-    def check_previous_years():
-        SQLCheckOperatorWithReturnValue(
+    check_previous_years = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=partial(slack_alert_data_quality, channel="slack_prj_permanent_sensors"),
             task_id="check_previous_years",
-            sql=f"SELECT * FROM ecocounter.open_data_previous_years_check()",
+            sql=f"SELECT * FROM dboucau.open_data_previous_years_check()",
             conn_id="ecocounter_bot",
         )
-    check_anomalous_ranges.doc_md = '''
+    check_previous_years.doc_md = '''
     Flag any changes which occured in the last month and would require the DAG to be run for previous years
     '''
     
@@ -235,8 +233,8 @@ def ecocounter_open_data_dag():
     (
         check_data_availability >>
         reminder_message() >>
-        check_anomalous_ranges() >>
-        check_previous_years() >>
+        check_anomalous_ranges >>
+        check_previous_years >>
         wait_till_10th >> [
             insert_and_download_data.expand(yr = yrs),
             output_readme()

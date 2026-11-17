@@ -47,22 +47,22 @@ SELECT
 	
 	'WARNING: Data in the anomalous ranges table was detected in the open_data tables. You may want to delete them before publication.' || E'\n\n'||
 	
-	'Rows from ```ecocounter.open_data_15min_counts```:' || E'\n'	|| 
+	'Rows from `ecocounter.open_data_15min_counts`:' || E'\n'	|| 
 	string_agg(
 		CASE
 			WHEN source_table = '15m_counts'
-			THEN format('```WHERE site_id=%s AND datetime_bin <@ daterange(%s, %s)```', site_id, min_datetime::date, max_datetime::date)
+			THEN format('`WHERE site_id=%s AND datetime_bin <@ daterange(%s, %s)`', site_id, min_datetime::date, max_datetime::date)
 		END,
     	E'\n'
 	)
 
 	|| E'\n\n'
 
-	'Rows from ```ecocounter.open_data_daily_counts```:' || E'\n'	|| 
+	'Rows from `ecocounter.open_data_daily_counts`:' || E'\n'	|| 
 	string_agg(
 		CASE
 			WHEN source_table = 'daily_counts'
-			THEN format('```WHERE site_id=%s AND dt <@ daterange('%s', %s)```', site_id, min_datetime::date, max_datetime::date)
+			THEN format('`WHERE site_id=%s AND dt <@ daterange('%s', %s)`', site_id, min_datetime::date, max_datetime::date)
 		END,
     	E'\n'
 	)
@@ -73,6 +73,7 @@ FROM anomalous_counts
 
 $BODY$;
 
+GRANT SELECT ON TABLE ecocounter.anomalous_ranges TO ecocounter_bot;
 
 ALTER FUNCTION ecocounter.open_data_anomalous_ranges_check() OWNER TO ecocounter_admins;
 

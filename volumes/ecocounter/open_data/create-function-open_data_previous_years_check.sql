@@ -69,9 +69,9 @@ SELECT
 	END AS error_msg_flag,
 
 		
-	'WARNING: Changes were detected which could effect data from previous years. You may need to run the ```ecocounter_open_data``` dag for a previous year' || E'\n\n'||
+	'WARNING: Changes were detected which could effect data from previous years. You may need to run the `ecocounter_open_data` dag for a previous year' || E'\n\n'||
 	STRING_AGG(
-	FORMAT('%s instances were detected in ```%s```. The earliest changes occur in %s', n_instances, table_name, effected_years),
+	FORMAT('%s instances were detected in `%s`. The earliest changes occur in %s', n_instances, table_name, effected_years),
 	E'\n'
 
 )
@@ -84,6 +84,8 @@ $BODY$;
 
 
 ALTER FUNCTION ecocounter.open_data_previous_years_check() OWNER TO ecocounter_admins;
+
+GRANT SELECT ON TABLE ecocounter.logged_actions TO ecocounter_bot;
 
 GRANT EXECUTE ON FUNCTION ecocounter.open_data_previous_years_check() TO ecocounter_admins;
 GRANT EXECUTE ON FUNCTION ecocounter.open_data_previous_years_check() TO ecocounter_bot;
