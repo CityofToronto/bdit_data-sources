@@ -97,7 +97,7 @@ def ecocounter_open_data_dag():
     @task()
     def check_anomalous_ranges():
         SQLCheckOperatorWithReturnValue(
-            task_id="check_site_outages",
+            task_id="check_anomalous_ranges",
             sql=f"SELECT * FROM ecocounter.open_data_anomalous_ranges_check()",
             conn_id="ecocounter_bot",
         )
@@ -224,6 +224,7 @@ def ecocounter_open_data_dag():
     (
         check_data_availability >>
         reminder_message() >>
+        check_anomalous_ranges() >>
         wait_till_10th >> [
             insert_and_download_data.expand(yr = yrs),
             output_readme()
