@@ -25,76 +25,69 @@ BEGIN
         c.detector_id,
         pairs.first_active,
         pairs.last_active,
-        upper(e.main_road_name::text)
-        || COALESCE(' and '::text || upper(e.cross_road_name::text), ''::text) AS detector_loc,
+        upper(e.main_road_name)
+        || COALESCE(' and ' || upper(e.cross_road_name), '') AS detector_loc,
         e.geom AS sensor_geom,
         cl_vds.centreline_id,
         cl.geom AS centreline_geom,
         dtypes.det_type,
-        CASE dtypes.det_type = 'RESCU Detectors'::text
-                WHEN TRUE THEN CASE substring(substring(c.detector_id::text, 'D\w{8}'::text), 2, 1)
+        CASE dtypes.det_type = 'RESCU Detectors'
+                WHEN TRUE THEN
+                CASE substring(substring(upper(c.detector_id), '(?=.*\d)D\w[^_\s]{7}'), 2, 1)
                     WHEN 'N' THEN 'DVP/Allen North' --North of Don Mills 
                     WHEN 'S' THEN 'DVP South' --South of Don Mills 
                     WHEN 'E' THEN 'Gardiner/Lakeshore East' --East of Yonge
                     WHEN 'W' THEN 'Gardiner/Lakeshore West' --West of Yonge
-                    WHEN 'K'::text THEN 'Kingston Rd'::text
-                    ELSE NULL::text
+                    WHEN 'K' THEN 'Kingston Rd'
                 END
-                ELSE NULL::text
             END AS det_loc,
-            CASE dtypes.det_type = 'RESCU Detectors'::text
+            CASE dtypes.det_type = 'RESCU Detectors'
                 WHEN true THEN
-                CASE substring(substring(c.detector_id::text, 'D\w{8}'::text), 9, 1)
-                    WHEN 'D'::text THEN 'DVP'::text
-                    WHEN 'L'::text THEN 'Lakeshore'::text
-                    WHEN 'G'::text THEN 'Gardiner'::text
-                    WHEN 'A'::text THEN 'Allen'::text
-                    WHEN 'K'::text THEN 'Kingston Rd'::text
-                    WHEN 'R'::text THEN 'On-Ramp'::text
-                    ELSE NULL::text
+                CASE substring(substring(upper(c.detector_id), '(?=.*\d)D\w[^_\s]{7}'), 9, 1)
+                    WHEN 'D' THEN 'DVP'
+                    WHEN 'L' THEN 'Lakeshore'
+                    WHEN 'G' THEN 'Gardiner'
+                    WHEN 'A' THEN 'Allen'
+                    WHEN 'K' THEN 'Kingston Rd'
+                    WHEN 'R' THEN 'On-Ramp'
                 END
-                ELSE NULL::text
             END AS det_group,
-            CASE dtypes.det_type = 'RESCU Detectors'::text
+            CASE dtypes.det_type = 'RESCU Detectors'
                 WHEN true THEN
-                CASE substring(substring(c.detector_id::text, 'D\w{8}'::text), 8, 1)
-                    WHEN 'E'::text THEN 'Eastbound'::text
-                    WHEN 'W'::text THEN 'Westbound'::text
-                    WHEN 'S'::text THEN 'Southbound'::text
-                    WHEN 'N'::text THEN 'Northbound'::text
-                    ELSE NULL::text
+                CASE substring(substring(upper(c.detector_id), '(?=.*\d)D\w[^_\s]{7}'), 8, 1)
+                    WHEN 'E' THEN 'Eastbound'
+                    WHEN 'W' THEN 'Westbound'
+                    WHEN 'S' THEN 'Southbound'
+                    WHEN 'N' THEN 'Northbound'
                 END
-                ELSE NULL::text
             END AS direction,
             --new cases need to be updated manually and then updated in vds.count_15min%.
             CASE
                 WHEN c.division_id = 8001 THEN 1 --15 min bins
                 --remainder are division_id = 2
                 WHEN
-                    dtypes.det_type = 'Smartmicro Sensors'::text
-                    OR c.detector_id::text ~ similar_to_escape('SMARTMICRO - D\w{8}'::text) THEN 3 --5 min bins
+                    dtypes.det_type = 'Smartmicro Sensors'
+                    OR lower(c.detector_id) SIMILAR TO 'smartmicro - d\w{8}' THEN 3 --5 min bins
                 WHEN
-                    lower(comms.source_id::text) ~ similar_to_escape('%whd%'::text)
-                    OR lower(comms.source_id::text) ~ similar_to_escape('%wavetronix%'::text) THEN 45 --20 sec bins
-                WHEN dtypes.det_type = 'RESCU Detectors'::text THEN 45 --20 sec bins
-                WHEN dtypes.det_type = 'Blue City AI'::text THEN 1 --15 min bins
-                WHEN lower(comms.source_id) LIKE 'houston radar%'::text THEN 30 --30 sec bins
+                    comms.source_id ILIKE '%whd%'
+                    OR comms.source_id ILIKE '%wavetronix%' THEN 45 --20 sec bins
+                WHEN dtypes.det_type = 'RESCU Detectors' THEN 45 --20 sec bins
+                WHEN dtypes.det_type = 'Blue City AI' THEN 1 --15 min bins
+                WHEN comms.source_id ILIKE '%houston radar%' THEN 30 --30 sec bins
                 --some unique cases
                 WHEN pairs.vdsconfig_uid = ANY (ARRAY[3683400, 3683403]) THEN 3
-                ELSE NULL::integer
             END AS expected_bins,
             comms.source_id AS comms_desc,
             --rescu techology type, determined by communication device in some cases.
             CASE
                 WHEN
-                    lower(comms.source_id::text) ~ similar_to_escape('%smartmicro%'::text)
-                    OR lower(c.detector_id::text) ~ similar_to_escape('%smartmicro%'::text) THEN 'Smartmicro'::text
+                    comms.source_id ILIKE '%smartmicro%'
+                    OR c.detector_id ILIKE '%smartmicro%' THEN 'Smartmicro'
                 WHEN
-                    lower(comms.source_id::text) ~ similar_to_escape('%whd%'::text)
-                    OR lower(comms.source_id::text) ~ similar_to_escape('%wavetronix%'::text) THEN 'Wavetronix'::text
-                WHEN lower(comms.source_id) LIKE 'houston radar%'::text THEN 'Radar'::text
-                WHEN dtypes.det_type = 'RESCU Detectors'::text THEN 'Inductive'::text
-                ELSE NULL::text
+                    comms.source_id ILIKE '%whd%'
+                    OR comms.source_id ILIKE '%wavetronix%' THEN 'Wavetronix'
+                WHEN comms.source_id ILIKE '%houston radar%' THEN 'Radar'
+                WHEN dtypes.det_type = 'RESCU Detectors' THEN 'Inductive'
             END AS det_tech
     FROM vds.last_active AS pairs
     LEFT JOIN vds.vdsconfig AS c
@@ -111,34 +104,33 @@ BEGIN
         && tsrange(comms.start_timestamp, COALESCE(comms.end_timestamp, now()::timestamp)),
             LATERAL (
                 SELECT CASE
-                    WHEN c.detector_id::text ~~ '%QWS%'::text
-                        THEN 'Smartmicro Sensors'::text
+                    WHEN c.detector_id ILIKE '%QWS%'
+                        THEN 'Smartmicro Sensors'
                     WHEN
-                        c.division_id = 2 AND (c.detector_id::text ~ similar_to_escape('D\w{8}%'::text)
+                        c.division_id = 2 AND lower(c.detector_id) SIMILAR TO 'd\w{8}%'
                         --smartmicro installed in place of old rescu sensors on highways
-                        OR c.detector_id::text ~ similar_to_escape('SMARTMICRO - D\w{8}'::text))
-                        THEN 'RESCU Detectors'::text
+                        OR lower(c.detector_id) SIMILAR TO 'smartmicro - d\w{8}'
+                        THEN 'RESCU Detectors'
                     WHEN
-                        c.detector_id::text ~ similar_to_escape('PX[0-9]{4}-DET%'::text)
+                        lower(c.detector_id) SIMILAR TO 'px[0-9]{4}-det%'
                         AND c.division_id = 8001
-                        THEN 'Signal Detectors'::text
+                        THEN 'Signal Detectors'
                     WHEN
-                        c.detector_id::text ~ similar_to_escape('PX[0-9]{4}-SF%'::text)
+                        lower(c.detector_id) SIMILAR TO 'px[0-9]{4}-sf%'
                         AND c.division_id = 8001
-                        THEN 'Signal Special Function'::text
+                        THEN 'Signal Special Function'
                     WHEN
-                        c.detector_id::text ~ similar_to_escape('PX[0-9]{4}-PE%'::text) AND c.division_id = 8001
-                        THEN 'Signal Preemption'::text
+                        lower(c.detector_id) SIMILAR TO 'px[0-9]{4}-pe%' AND c.division_id = 8001
+                        THEN 'Signal Preemption'
                     WHEN
-                        (c.detector_id::text ~~ 'BCT%'::text OR c.detector_id::text ~~ 'OBC%'::text)
-                        THEN 'Blue City AI'::text
+                        (c.detector_id ILIKE 'BCT%' OR c.detector_id ILIKE 'OBC%')
+                        THEN 'Blue City AI'
                     WHEN
-                        lower(comms.source_id::text) ~~ '%wavetronix%'::text THEN 'Wavetronix'::text
+                        comms.source_id ILIKE '%wavetronix%' THEN 'Wavetronix'
                     WHEN
-                        lower(comms.source_id) LIKE 'houston radar%'::text THEN 'Houston Radar'::text
+                        comms.source_id ILIKE 'houston radar%' THEN 'Houston Radar'
                     --note there is also a smartmicro categorization above -> Rescu Detectors
-                    WHEN lower(comms.source_id::text) ~ similar_to_escape('%smartmicro%'::text) THEN 'Smartmicro Sensors'::text
-                    ELSE NULL::text
+                    WHEN comms.source_id ILIKE '%smartmicro%' THEN 'Smartmicro Sensors'
                 END AS det_type
             ) AS dtypes
     ORDER BY
