@@ -70,8 +70,8 @@ UNION ALL
 
 --travel time app gives result of 58.7 vs 65.328 for harmonic mean above. Check if this is just a mean vs harmonic mean discrepency.
 --time_mean = 58.7 - https://trans-bdit.intra.prod-toronto.ca/tt-request-backend/aggregate-travel-times/30334262/30334233/7/8/2023-12-13/2023-12-14/true/1234567
---time_mean = 52.19618735 - below (59.83260903, 43.28037237, 32.10521177, 73.56655622)
---does not match!
+--time_mean = 58.73 - below (59.83260903, 43.28037237, 32.10521177, 99.7192378)
+--matches!
 
 --get the data to manually verify.
 WITH links AS MATERIALIZED (

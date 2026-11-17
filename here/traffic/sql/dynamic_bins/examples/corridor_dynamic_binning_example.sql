@@ -76,9 +76,9 @@ UNION ALL
 
 
 --travel time app gives result of 99 vs 98.92 for harmonic mean above. Check if this is just a mean vs harmonic mean discrepency.
---time_mean = 99 - https://trans-bdit.intra.prod-toronto.ca/tt-request-backend/aggregate-travel-times/30420278/30419014/5/6/2026-02-15/2026-02-16/true/1234567
---time_mean = 98.59 - below (98.16309001, 85.20976863, 109.1447999, 101.843490)
---does not match!
+--time_mean = 99 - (98.5, 85.5, 109.6, 102.2) https://trans-bdit.intra.prod-toronto.ca/tt-request-backend/aggregate-travel-times/30420278/30419014/5/6/2026-02-15/2026-02-16/true/1234567
+--time_mean = 98.98 - below (98.49, 85.53, 109.65, 102.24)
+--matches!
 
 WITH links AS MATERIALIZED (
     SELECT
@@ -86,7 +86,7 @@ WITH links AS MATERIALIZED (
         lat.len,
         lat.len / SUM(lat.len) OVER () AS proportion_of_length
     --edit the map version here if neccessary based on the corridor selected
-    FROM here.routing_streets_25_1 AS streets,
+    FROM here.routing_streets_24_4 AS streets,
     LATERAL (
         SELECT st_length(st_transform(streets.geom, 2952)) AS len
     ) AS lat
