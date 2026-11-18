@@ -256,14 +256,14 @@ def vdsdata_dag():
             wait_for_weather_timesensor() >> check_avg_rows
 
     [
+        check_partitions() >>
         pull_vdsdata() >>
-        [
-            update_inventories(),
-            check_partitions()
-        ] >>
+        update_inventories() >>
         summarize_v15() >>
-        check_dow() >> t_done >>
-        t_empty >> data_checks()
+        check_dow() >>
+        t_done >>
+        t_empty >>
+        data_checks()
     ]
-
+    
 vdsdata_dag()
