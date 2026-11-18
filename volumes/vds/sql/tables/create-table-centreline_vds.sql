@@ -29,3 +29,9 @@ AFTER INSERT OR UPDATE
 ON vds.centreline_vds
 FOR EACH ROW
 EXECUTE FUNCTION vds.update_detector_inventory_centreline();
+
+CREATE OR REPLACE TRIGGER delete_detector_inventory_centreline
+AFTER DELETE
+ON vds.centreline_vds
+FOR EACH ROW
+EXECUTE FUNCTION vds.delete_detector_inventory_centreline();

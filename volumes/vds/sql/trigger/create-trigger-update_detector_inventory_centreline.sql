@@ -10,8 +10,8 @@ BEGIN
 
     UPDATE gwolofs.detector_inventory AS di
     SET
-        di.centreline_id = NEW.centreline_id,
-        di.centreline_geom = (SELECT geom FROM gis_core.centreline_latest WHERE centreline_id = NEW.centreline_id)
+        centreline_id = NEW.centreline_id,
+        centreline_geom = (SELECT geom FROM gis_core.centreline_latest WHERE centreline_id = NEW.centreline_id)
     WHERE di.vdsconfig_uid = NEW.vdsconfig_uid;  
 
     RETURN NEW;
