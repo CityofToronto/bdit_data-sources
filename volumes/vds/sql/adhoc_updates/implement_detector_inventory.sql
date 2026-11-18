@@ -9,9 +9,9 @@ WITH pairs AS (
         vdsconfig_uid,
         entity_location_uid,
         division_id,
-        MIN(dt) AS first_active,
-        MAX(dt) AS last_active
-    FROM vds.raw_vdsdata_div2
+        MIN(datetime_15min) AS first_active,
+        MAX(datetime_15min) AS last_active
+    FROM vds.counts_15min_div2
     WHERE division_id + vdsconfig_uid + entity_location_uid IS NOT NULL
     GROUP BY 1,2,3
 )
