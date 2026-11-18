@@ -10,6 +10,7 @@
   - [How was it aggregated \& filtered? What pitfalls should I avoid?](#how-was-it-aggregated--filtered-what-pitfalls-should-i-avoid)
   - [Future Work](#future-work)
 - [Table Structure](#table-structure)
+  - [Overview](#overview)
   - [Tips for Use](#tips-for-use)
   - [Lookup Tables and Views](#lookup-tables-and-views)
     - [vds.detector\_inventory](#vdsdetector_inventory)
@@ -139,6 +140,47 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 - Further investigation of new sensor classes (division_id 8001, BlueCity, SmartMicro) to determine utility or if we should store these records at all. 
 
 # Table Structure  
+
+## Overview
+
+```mermaid
+%%{init: {'theme': 'neutral', 'flowchart': {'defaultRenderer': 'elk'}}}%%
+flowchart TD
+    subgraph "vds detector_inventory"
+        add_entity_locations_geoms@{ shape: braces, label: "add_entity_locations_geoms" } --> entity_locations
+        
+        di@{ shape: odd, label: detector_inventory}
+        entity_locations --> fn_di
+        fn_di@{ shape: braces, label: "insert_detector_inventory_rows" } --> di
+        refresh_centrelines@{ shape: braces, label: "refresh_centrelines" } --> centreline_vds
+        centreline_vds --> update_detector_inventory_centreline@{ shape: braces, label: "update_detector_inventory_centreline" } --> di
+        centreline_vds --> fn_di
+        vdsconfig --> fn_di
+        config_comms_device --> fn_di
+    end
+
+    subgraph "raw data"
+        add_vds_fkeys@{ shape: braces, label: "add_vds_fkeys" }
+        add_vds_fkeys --> raw_vdsdata
+        add_vds_fkeys --> raw_vdsvehicledata
+        raw_vdsdata --> counts_15min@{ shape: procs, label: "counts_15min"}
+        raw_vdsdata --> counts_15min_bylane@{ shape: procs, label: "counts_15min_bylane"}
+        counts_15min@{ shape: procs, label: "counts_15min"}
+        counts_15min --> network_outages@{ shape: odd}
+        counts_15min --> individual_outages@{ shape: odd}
+        partition_vds_yyyy@{ shape: braces, label: "partition_vds_yyyy"}
+        partition_vds_yyyymm@{ shape: braces, label: "partition_vds_yyyymm"}
+        partition_vds_yyyy --> counts_15min
+        partition_vds_yyyy --> counts_15min_bylane
+        partition_vds_yyyymm --> raw_vdsdata
+        partition_vds_yyyymm --> raw_vdsvehicledata
+        raw_vdsdata@{ shape: procs, label: "raw_vdsdata"}
+        raw_vdsvehicledata@{ shape: procs, label: "raw_vdsvehicledata"}
+        raw_vdsvehicledata --> veh_length_15min
+        raw_vdsvehicledata --> veh_speeds_15min
+        counts_15min --> volumes_daily
+    end
+```
 
 ## Tips for Use
 - The raw data tables are very large. Make sure to use Explain (F7) and check you are using available indices and partitions.
