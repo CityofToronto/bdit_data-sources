@@ -23,3 +23,15 @@ GRANT SELECT ON TABLE vds.centreline_vds TO vds_bot;
 COMMENT ON TABLE vds.centreline_vds IS E''
 'Table to store VDS sensors - centreline equivalency. '
 'See `vds.detector_inventory` mat view for ease of use.';
+
+CREATE OR REPLACE TRIGGER update_detector_inventory_centreline
+AFTER INSERT OR UPDATE
+ON vds.centreline_vds
+FOR EACH ROW
+EXECUTE FUNCTION vds.update_detector_inventory_centreline();
+
+CREATE OR REPLACE TRIGGER delete_detector_inventory_centreline
+AFTER DELETE
+ON vds.centreline_vds
+FOR EACH ROW
+EXECUTE FUNCTION vds.delete_detector_inventory_centreline();

@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 from datetime import datetime, timedelta
 from functools import partial
 
@@ -16,9 +17,12 @@ from dags.dag_owners import owners
 from volumes.vds.py.vds_functions import (
     pull_raw_vdsdata, pull_detector_inventory, pull_entity_locations, pull_commsdeviceconfig
 )
-from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd
+from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, get_readme_docmd, send_slack_msg
 from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
 from bdit_dag_utils.utils.common_tasks import check_jan_1st, wait_for_weather_timesensor, check_if_dow
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 DAG_NAME = 'vds_pull_vdsdata'
 DAG_OWNERS = owners.get(DAG_NAME, ['Unknown'])
@@ -90,11 +94,35 @@ def vdsdata_dag():
             reset_dag_run=True
         )
 
+        @task(retries=0)
+        def update_vds_detector_inventory(conn_id="vds_bot", **context):
+            fpath = os.path.join(repo_path, "volumes/vds/sql/insert/new_vds_detectors.sql")
+            with open(fpath, 'r', encoding='utf-8') as file:
+                query = file.read()
+            
+            with PostgresHook(conn_id).get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query)
+                    new_sensors = cur.fetchall()
+                    
+            if new_sensors:
+                _check, summ, new = new_sensors[0]
+                if not _check:
+                    LOGGER.info('New VDS detectors added: %s', new)
+                    extra_msg = '\n'.join([str(item) for item in new])
+                    send_slack_msg(
+                        context=context,
+                        msg=summ,
+                        channel="slack_prj_permanent_sensors",
+                        attachments=[{"text": extra_msg}],
+                        use_proxy=True,
+                        include_owners=True
+                    )
         [
             pull_and_insert_detector_inventory(),
             pull_and_insert_entitylocations(),
             pull_and_insert_commsdeviceconfig()
-        ] >> t_done
+        ] >> update_vds_detector_inventory() >> t_done
 
     @task_group
     def check_partitions():
@@ -222,14 +250,14 @@ def vdsdata_dag():
             wait_for_weather_timesensor() >> check_avg_rows
 
     [
-        [
-            update_inventories(),
-            check_partitions()
-        ] >>
+        check_partitions() >>
         pull_vdsdata() >>
+        update_inventories() >>
         summarize_v15() >>
-        check_dow() >> t_done >>
-        t_empty >> data_checks()
+        check_dow() >>
+        t_done >>
+        t_empty >>
+        data_checks()
     ]
-
+    
 vdsdata_dag()

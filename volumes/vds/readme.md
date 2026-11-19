@@ -10,6 +10,7 @@
   - [How was it aggregated \& filtered? What pitfalls should I avoid?](#how-was-it-aggregated--filtered-what-pitfalls-should-i-avoid)
   - [Future Work](#future-work)
 - [Table Structure](#table-structure)
+  - [Overview](#overview)
   - [Tips for Use](#tips-for-use)
   - [Lookup Tables and Views](#lookup-tables-and-views)
     - [vds.detector\_inventory](#vdsdetector_inventory)
@@ -17,7 +18,6 @@
     - [vds.entity\_locations](#vdsentity_locations)
     - [`vds.config_comms_device`](#vdsconfig_comms_device)
     - [`vds.centreline_vds`](#vdscentreline_vds)
-    - [`vds.last_active`](#vdslast_active)
   - [Aggregate Tables](#aggregate-tables)
     - [vds.counts\_15min](#vdscounts_15min)
     - [vds.counts\_15min\_bylane](#vdscounts_15min_bylane)
@@ -141,6 +141,47 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 
 # Table Structure  
 
+## Overview
+
+```mermaid
+%%{init: {'theme': 'neutral', 'flowchart': {'defaultRenderer': 'elk'}}}%%
+flowchart TD
+    subgraph "vds detector_inventory"
+        add_entity_locations_geoms@{ shape: braces, label: "add_entity_locations_geoms" } --> entity_locations
+        
+        di@{ shape: odd, label: detector_inventory}
+        entity_locations --> fn_di
+        fn_di@{ shape: braces, label: "insert_detector_inventory_rows" } --> di
+        refresh_centrelines@{ shape: braces, label: "refresh_centrelines" } --> centreline_vds
+        centreline_vds --> update_detector_inventory_centreline@{ shape: braces, label: "update_detector_inventory_centreline" } --> di
+        centreline_vds --> fn_di
+        vdsconfig --> fn_di
+        config_comms_device --> fn_di
+    end
+
+    subgraph "raw data"
+        add_vds_fkeys@{ shape: braces, label: "add_vds_fkeys" }
+        add_vds_fkeys --> raw_vdsdata
+        add_vds_fkeys --> raw_vdsvehicledata
+        raw_vdsdata --> counts_15min@{ shape: procs, label: "counts_15min"}
+        raw_vdsdata --> counts_15min_bylane@{ shape: procs, label: "counts_15min_bylane"}
+        counts_15min@{ shape: procs, label: "counts_15min"}
+        counts_15min --> network_outages@{ shape: odd}
+        counts_15min --> individual_outages@{ shape: odd}
+        partition_vds_yyyy@{ shape: braces, label: "partition_vds_yyyy"}
+        partition_vds_yyyymm@{ shape: braces, label: "partition_vds_yyyymm"}
+        partition_vds_yyyy --> counts_15min
+        partition_vds_yyyy --> counts_15min_bylane
+        partition_vds_yyyymm --> raw_vdsdata
+        partition_vds_yyyymm --> raw_vdsvehicledata
+        raw_vdsdata@{ shape: procs, label: "raw_vdsdata"}
+        raw_vdsvehicledata@{ shape: procs, label: "raw_vdsvehicledata"}
+        raw_vdsvehicledata --> veh_length_15min
+        raw_vdsvehicledata --> veh_speeds_15min
+        counts_15min --> volumes_daily
+    end
+```
+
 ## Tips for Use
 - The raw data tables are very large. Make sure to use Explain (F7) and check you are using available indices and partitions.
 - In some cases you may find it easier to select from only the partition of interest. eg. `FROM vds.raw_vdsdata_div2_202308` instead of more verbose ```FROM vds.raw_vdsdata WHERE division_id = 2 and dt >= '2023-08-01 00:00:00'::timestamp....```.
@@ -153,7 +194,8 @@ The regular detectors (DET) may have some utility but it is hard to tell with th
 
 ### vds.detector_inventory
 **The main table for filtering and identifying VDS/RESCU sensors locations.**
-This view draws info from the various config tables to make it easier to explore and filter VDS sensors. It contains all the combinations of `vdsconfig_uid` and `entity_location_uid` **which have produced data** to date. These dates are updated daily via Airflow `vds_pull_vdsdata` DAG.   
+This table draws info from the various config tables to make it easier to explore and filter VDS sensors. It contains all the combinations of `vdsconfig_uid` and `entity_location_uid` **which have produced data** to date. Table is maintained daily by the `vds_pull_vdsdata` DAG which inserts new sensors/updates dates during the [insert](sql/insert/insert_raw_vdsdata.sql) into `vds.raw_vdsdata` and updates other details with the `vds.insert_detector_inventory_rows` function. 
+
 Use the geoms and `first_active` and `last_active` fields in this view to select your sensors and then join to `counts_15min USING (vdsconfig_uid, entity_location_uid)`. 
 - Criteria for manual fields are defined within case statements [here](<sql/views/create-view-detector_inventory.sql>).  
 - If you add new rules to `expected_bins` to reflect new sensor types, see the heading `New sensor type added?` or `Sensor type incorrectly classified?` under [Data Ops](#data-ops-something-went-wrong-predictably-how-do-i-fix-it) heading. 
@@ -175,8 +217,8 @@ Row count: 11,558
 | sensor_geom | geom    | | geom from `vds.entity_locations` |  
 | centreline_id | integer |  | `centreline_id` from `vds.centreline_vds` | 
 | centreline_geom | geom    |  | geom from `gis_core.centreline_latest` | 
-| first_active | timestamp  | | first timestamp the sensor produced data |
-| last_active | timestamp  | | last timestamp the sensor has produced data to date | 
+| first_active | timestamp  | | First timestamp with data for this combindation of vdsconfig_uid / entity_location_uid. |
+| last_active | timestamp  | | Last timestamp with data for this combindation of vdsconfig_uid / entity_location_uid. | 
 
 ### vds.vdsconfig
 This table contains details about vehicle detectors pulled from ITSC `public.vdsconfig`. For more information or help interpreting these fields you can search the web interface for [ITS Central](https://itscentral.corp.toronto.ca/Vds/). 
@@ -273,19 +315,6 @@ Row count: 392
 |:----------------|:----------------------------|:---------------------------|-----------:|
 | centreline_id     | bigint                    |                           | |
 | vdsconfig_uid     | integer                    |                           | |
-
-### `vds.last_active`
-A table updated daily during the [insert](sql/insert/insert_raw_vdsdata.sql) into `vds.raw_vdsdata` to maintain an up to date list of sensor first and last active dates. See instead `vds.detector_inventory` which contains additional sensor details. 
-
-Row count: 11,558
-| column_name     | data_type                   | sample                     |   Comments |
-|:----------------|:----------------------------|:---------------------------|-----------:|
-| detector_uid | integer                    |                           | |
-| division_id | smallint                    |                           | |
-| vdsconfig_uid | integer                    |                           | |
-| entity_location_uid | integer                    |                           | |
-| first_active | timestamp without time zone  |                           | First timestamp with data for this combindation of vdsconfig_uid / entity_location_uid. |
-| last_active | timestamp without time zone |                           | Last timestamp with data for this combindation of vdsconfig_uid / entity_location_uid. |
 
 ## Aggregate Tables
 
