@@ -1,7 +1,7 @@
 CREATE TABLE ecocounter.flows_unfiltered (
     flow_id numeric NOT NULL,
     site_id numeric NOT NULL,
-    flow_direction text COLLATE pg_catalog."default" NOT NULL,
+    flow_direction travel_directions,
     flow_geom GEOMETRY (LINESTRING, 4326),
     bin_size interval NOT NULL,
     notes text COLLATE pg_catalog."default",

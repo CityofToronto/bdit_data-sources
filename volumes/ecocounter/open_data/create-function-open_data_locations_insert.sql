@@ -9,7 +9,7 @@ AS $BODY$
     INSERT INTO open_data.cycling_permanent_counts_locations (
         location_name, direction, linear_name_full, side_street, longitude, latitude,
         centreline_id, bin_size, latest_calibration_study, first_active, last_active,
-        date_decommissioned, technology
+        date_decommissioned, technology, bidirectional
     )
     SELECT
         location_name,
@@ -24,7 +24,8 @@ AS $BODY$
         first_active,
         last_active,
         date_decommissioned,
-        technology
+        technology,
+        bidirectional
     FROM ecocounter.open_data_locations
     ON CONFLICT (location_name, direction)
     DO UPDATE SET
@@ -38,7 +39,8 @@ AS $BODY$
         first_active = EXCLUDED.first_active,
         last_active = EXCLUDED.last_active,
         date_decommissioned = EXCLUDED.date_decommissioned,
-        technology = EXCLUDED.technology;
+        technology = EXCLUDED.technology,
+        bidirectional = EXCLUDED.bidirectional;
 
 $BODY$;
 
