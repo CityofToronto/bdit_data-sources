@@ -60,5 +60,19 @@ HOST=""
     --csv -o "/home/airflow/open_data/permanent-bike-counters/cycling_permanent_counts_daily.csv"
 
 
+/usr/bin/psql -h $HOST -U ecocounter_bot -d bigdata -c \
+                    "SELECT location_dir_id, location_name, direction, linear_name_full, side_street,
+                        bidirectional, longitude, latitude, centreline_id, bin_size, latest_calibration_study,
+                        first_active, last_active, date_decommissioned, technology
+                    FROM open_data.cycling_permanent_counts_locations
+                    ORDER BY location_dir_id;" \
+                    --csv -o "/home/airflow/open_data/permanent-bike-counters/cycling_permanent_counts_locations.csv"
+
+/usr/bin/psql -h $HOST -U ecocounter_bot -d bigdata -c \
+        "SELECT featurecollection FROM open_data.cycling_permanent_counts_locations_geojson;" \
+        --tuples-only -o "/home/airflow/open_data/permanent-bike-counters/cycling_permanent_counts_locations.geojson"
+
+pandoc -V geometry:margin=1in -o "/home/airflow/open_data/permanent-bike-counters/cycling_permanent_counts_readme.pdf" "/data/home/gwolofs/bdit_data-sources/ecocounter/volumes/open_data/sql/cycling_permanent_counts_readme.md"
+
 #as bigdata user:
 #cp /home/airflow/open_data/permanent-bike-counters/* /data/open_data/permanent-bike-counters
