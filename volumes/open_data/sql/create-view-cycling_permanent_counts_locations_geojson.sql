@@ -11,6 +11,7 @@ WITH features AS (
                 'direction', direction,
                 'linear_name_full', linear_name_full,
                 'side_street', side_street,
+                'bidirectional', bidirectional,
                 'centreline_id', centreline_id,
                 'bin_size', bin_size,
                 'latest_calibration_study', latest_calibration_study,

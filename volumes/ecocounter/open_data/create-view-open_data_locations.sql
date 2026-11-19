@@ -19,16 +19,16 @@ SELECT DISTINCT ON (s.site_description, od.direction::text)
     od.direction,
     s.linear_name_full,
     s.side_street,
-    s.bidirectional,
     ROUND(st_x(s.geom)::numeric, 7) AS lng,
     ROUND(st_y(s.geom)::numeric, 7) AS lat,
     s.centreline_id,
     f.bin_size,
+    cf.count_date AS latest_calibration_study,
     od.min_date AS first_active,
     od.max_date AS last_active,
     s.date_decommissioned::date AS date_decommissioned,
-    cf.count_date AS latest_calibration_study,
-    s.technology
+    s.technology,
+    s.bidirectional
 FROM ecocounter.flows AS f
 JOIN ecocounter.sites AS s USING (site_id)
 --omit sites if they have no data to publish.
