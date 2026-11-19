@@ -5,9 +5,9 @@ SELECT
     AS summ,
     array_agg(
         'row_id: `' || row_id
-        || '`, detector_id: `' || detector_id || '`'
+        || '`, detector_id: `' || detector_id
         || '`, detector_loc: `' || detector_loc || '`'
-    ) AS gaps
+    ) AS new_detectors
 --insert with new row return
 FROM vds.insert_detector_inventory_rows()
 WHERE division_id = 2;
