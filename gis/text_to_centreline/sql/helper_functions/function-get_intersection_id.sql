@@ -35,7 +35,7 @@ WHERE
 GROUP BY
     intersections.objectid,
     intersections.int_id
-HAVING COUNT(DISTINCT TRIM(intersections.street)) > 1
+HAVING COUNT(DISTINCT CASE WHEN levenshtein.lev_highway > levenshtein.lev_btwn THEN 'highway' ELSE 'btwn' END) > 1
 ORDER BY AVG(LEAST(levenshtein.lev_highway, levenshtein.lev_btwn))
 LIMIT 1;
 
