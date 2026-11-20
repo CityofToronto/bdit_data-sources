@@ -2,6 +2,10 @@
 -- miovision_api.unacceptable_gaps table. gap_tolerance set using 60 day 
 -- lookback avg volumes and thresholds defined in gapsize_lookup. 
 
+--when run in 1 day increments (as in daily airflow), this function
+--will miss small gaps that overlap midnight, but that are deemed
+--OK when looking only at data before midnight.  
+
 CREATE OR REPLACE FUNCTION miovision_api.find_gaps(
     start_date timestamp,
     end_date timestamp,
@@ -30,41 +34,30 @@ BEGIN
         AND dt < end_date::date
         AND intersection_uid = ANY(target_intersections);
     
-    --find intersections active each day
-    WITH daily_intersections AS (
-        SELECT DISTINCT
-            datetime_bin::date AS dt,
-            v.intersection_uid
-        FROM miovision_api.volumes AS v
-        INNER JOIN miovision_api.intersections AS i USING (intersection_uid)
-        WHERE
-            v.datetime_bin >= start_date
-            AND v.datetime_bin < end_date
-            AND v.datetime_bin >= i.date_installed
-            AND (
-                v.datetime_bin < i.date_decommissioned
-                OR i.date_decommissioned IS NULL
-            )
-            AND i.intersection_uid = ANY(target_intersections)
-    ),
-
     --combine the artificial and actual datetime_bins. 
-    fluffed_data AS (
+    WITH fluffed_data AS (
         --add the start and end of the day interval for each active intersection
         --to make sure the gaps are not open ended. 
         SELECT
-            i.dt,
+            bins.datetime_bin::date AS dt,
             i.intersection_uid,
-            bins.datetime_bin,
+            bins.datetime_bin::timestamp,
             interval '0 minutes' AS gap_adjustment --don't need to reduce gap width for artificial data
-        FROM daily_intersections AS i
-        --add artificial data points at start and end of each day to find gaps overlapping start/end.
-        CROSS JOIN LATERAL (
-            VALUES
-                --catch gaps overlapping days
-                (i.dt - interval '15 minutes'),
-                (i.dt + interval '1 day')
+        FROM miovision_api.intersections AS i
+        --add artificial data points at start and end of each day to make
+        --gaps not overlap multiple days (exception: multi full-day outage). 
+        CROSS JOIN generate_series(
+                start_date,
+                end_date,
+                interval '1 day'            
         ) AS bins(datetime_bin)
+        WHERE
+            bins.datetime_bin >= i.date_installed
+            AND (
+                bins.datetime_bin < i.date_decommissioned
+                OR i.date_decommissioned IS NULL
+            )
+            AND i.intersection_uid = ANY(target_intersections)
 
         --group by in next step takes care of duplicates
         UNION ALL
@@ -78,7 +71,7 @@ BEGIN
             interval '1 minute' AS gap_adjustment
         FROM miovision_api.volumes
         WHERE
-            datetime_bin >= start_date - interval '15 minutes'
+            datetime_bin >= start_date
             AND datetime_bin < end_date
             AND intersection_uid = ANY(target_intersections)
     ),
@@ -130,8 +123,7 @@ BEGIN
         FROM bin_times AS bt
         --match gaps to the 15 minute bins they intersect
         JOIN generate_series(
-                --catch gaps overlapping days
-                start_date - interval '15 minutes',
+                start_date,
                 end_date,
                 interval '15 minutes'
         ) AS bins(datetime_bin) ON
