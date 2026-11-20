@@ -2,19 +2,13 @@ CREATE OR REPLACE FUNCTION vds.refresh_centrelines()
 RETURNS VOID AS $$
 
 --if the centreline has fallen out of centreline_latest, delete and reprocess.
+--delete gets cascaded to detector_inventory via trigger
 DELETE FROM vds.centreline_vds
 WHERE
     centreline_id IS NOT NULL --allow for null placeholders
     AND centreline_id NOT IN (
         SELECT centreline_id FROM gis_core.centreline_latest
     );
-
-/*
---when we change to detector_inventory as a table, we will need to cascade updates manually (or with a trigger).
-UPDATE vds.detector_inventory
-SET centreline_id = NULL, centreline_geom = NULL
-WHERE ...
-*/
 
 WITH vds_centreline_temp AS (
 
@@ -79,6 +73,7 @@ WITH vds_centreline_temp AS (
         st_distance(det.sensor_geom, cl.geom)
 )
 
+--insert gets cascaded to detector_inventory via trigger
 INSERT INTO vds.centreline_vds (centreline_id, vdsconfig_uid)
 SELECT
     centreline_id,
