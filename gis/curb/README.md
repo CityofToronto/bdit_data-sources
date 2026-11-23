@@ -106,3 +106,5 @@ Several parameters in the script can be tweaked, so it could be run with multipl
 - The angle ranges that define each confidence level
 
 ### Identify bulb-out
+
+Bulb-out or road edges that have changing road width can be identified and handle separately. 
