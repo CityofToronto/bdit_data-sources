@@ -264,14 +264,14 @@ Row count: 666
 | description     | character varying           |                            |  |
 
 ### `vds.centreline_vds`
-Table to store VDS sensors - centreline equivalency. See `vds.detector_inventory` mat view for ease of use.
+Table to store VDS sensors - centreline equivalency. See `vds.detector_inventory` table for ease of use, including centreline_latest geoms.
 Centrelines are all matched to `centreline_latest` - join using: `vds.centreline_vds LEFT JOIN gis_core.centreline_latest USING (centreline_id)`.
 See update instructions [below](#updating-vdscentreline_vds). 
 
 Row count: 392
 | column_name     | data_type                   | sample                     |   Comments |
 |:----------------|:----------------------------|:---------------------------|-----------:|
-| centreline_id     | bigint                    |                           | |
+| centreline_id     | bigint                    |                           | Can be NULL if centreline does not exist in network. |
 | vdsconfig_uid     | integer                    |                           | |
 
 ### `vds.last_active`
