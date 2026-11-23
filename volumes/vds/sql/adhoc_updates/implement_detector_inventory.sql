@@ -13,7 +13,10 @@ WITH pairs AS (
         MAX(datetime_15min) AS last_active
     FROM vds.counts_15min_div2
     WHERE division_id + vdsconfig_uid + entity_location_uid IS NOT NULL
-    GROUP BY 1,2,3
+    GROUP BY
+        vdsconfig_uid,
+        entity_location_uid,
+        division_id
 )
 
 INSERT INTO gwolofs.detector_inventory AS di (
@@ -82,7 +85,7 @@ SELECT DISTINCT ON (
             WHEN dtypes.det_type = 'Blue City AI' THEN 1 --15 min bins
             WHEN comms.source_id ILIKE '%houston radar%' THEN 30 --30 sec bins
             --some unique cases
-            WHEN pairs.vdsconfig_uid = ANY (ARRAY[3683400, 3683403]) THEN 3
+            WHEN pairs.vdsconfig_uid = ANY(ARRAY[3683400, 3683403]) THEN 3
         END AS expected_bins,
         comms.source_id AS comms_desc,
         --rescu techology type, determined by communication device in some cases.
@@ -166,9 +169,9 @@ DO UPDATE SET
 
 --2. drop dependencies
 SELECT dbadmin.deps_save_and_drop_dependencies(
-	p_view_schema:= 'vds'::character varying COLLATE "C",
-	p_view_name:='detector_inventory'::character varying COLLATE "C", 
-	max_depth := 20::integer
+    p_view_schema := 'vds'::character varying COLLATE "C",
+    p_view_name :='detector_inventory'::character varying COLLATE "C", 
+    max_depth := 20::integer
 );
 
 --3. replace vds.detector_inventory with one in gwolofs schema
@@ -184,6 +187,6 @@ GRANT ALL ON SEQUENCE vds.detector_inventory_row_id_seq TO vds_admins;
 
 --4. now restore dependencies:
 SELECT dbadmin.deps_restore_dependencies(
-    p_view_schema:= 'vds'::character varying COLLATE "C",
-    p_view_name:= 'detector_inventory'::character varying COLLATE "C"
+    p_view_schema := 'vds'::character varying COLLATE "C",
+    p_view_name := 'detector_inventory'::character varying COLLATE "C"
 );
