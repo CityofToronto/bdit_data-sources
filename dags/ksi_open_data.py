@@ -230,12 +230,7 @@ def ksi_opan_data():
             "The following data checks failed:\n\n"
             "{{ ti.xcom_pull(task_ids='decide_approval', key='summary')['details'] }}"
             ),
-        defaults="Approve",
-        assigned_users=[
-                {"id": "1", "name": "admin"},
-                {"id": "4", "name": "natalie"},
-                {"id": "44", "name": "dmcelroy"},
-            ])
+        defaults="Approve")
 
     @task()
     def status_message(**context):
