@@ -441,7 +441,7 @@ extension_confidence AS (
             WHEN n_overlaps > 0   THEN 0
             WHEN bend_deg > 5    THEN 1 -- trial and error arbitrary  number 
             WHEN angle_deg >= 75 and angle_deg <= 105 THEN 3 --90 degree ish should be pretty good
-            WHEN angle_deg >= 45 AND angle_deg <= 135 THEN 2 -- not as 90 degree but should be ok 
+            WHEN angle_deg >= 60 AND angle_deg <= 120 THEN 2 -- not as 90 degree but should be ok 
             ELSE 1 -- too small of an angle probably?
         END AS confidence_rank
     FROM extension_checks

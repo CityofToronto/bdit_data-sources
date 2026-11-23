@@ -47,7 +47,7 @@ For each polygon in `edge_of_roadway`, the script:
 |---|---|
 | `very low` | The extended line crosses or overlaps another line in the final layer.  |
 | `low` | The line bends by more than 5° near one of its ends, which means the extension direction is not straight (more unreliable), or the angle between the two roads that meet is outside 45–135°* |
-| `medium` | The angle between the two roads is 45–135° (Not very right angle)|
+| `medium` | The angle between the two roads is 60–120° (Not very right angle)|
 | `high` | The angle between the two roads is 75–105°, close to a right angle |
 
 *Angles and bend thresholds were chosen by trial and error, so they can be altered if we decide to run another iteration. The confidence level should still be treat as a guide to what to review first rather than a measure of accuracy. e.g. A medium/low confidence level might be assigned to a curb at a naturally angled intersection, even when the extension is correct. See highlighted red line in the example below.
