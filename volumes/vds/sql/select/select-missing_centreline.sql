@@ -3,10 +3,11 @@ WITH missing AS (
         di.vdsconfig_uid,
         di.detector_id
     FROM vds.detector_inventory AS di
-    LEFT JOIN vds.centreline_vds AS c USING (vdsconfig_uid)
+    --anti join null placeholders
+    LEFT JOIN vds.centreline_vds AS nulls USING (vdsconfig_uid)
     WHERE
         di.division_id = 2
-        AND c.vdsconfig_uid IS NULL --missing, but allowing for manual null centrelines
+        AND nulls.vdsconfig_uid IS NULL --missing, but allowing for manual null centrelines
     ORDER BY vdsconfig_uid
 )
 
