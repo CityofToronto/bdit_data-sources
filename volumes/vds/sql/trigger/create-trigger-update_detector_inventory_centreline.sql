@@ -8,7 +8,7 @@ SECURITY DEFINER
 AS $BODY$
 BEGIN
 
-    UPDATE gwolofs.detector_inventory AS di
+    UPDATE vds.detector_inventory AS di
     SET
         centreline_id = NEW.centreline_id,
         centreline_geom = (SELECT geom FROM gis_core.centreline_latest WHERE centreline_id = NEW.centreline_id)

@@ -6,7 +6,7 @@ WITH inserted AS (
     RETURNING division_id, vdsconfig_uid, entity_location_uid, dt
 )
 
-INSERT INTO gwolofs.detector_inventory AS di (
+INSERT INTO vds.detector_inventory AS di (
     division_id, vdsconfig_uid, entity_location_uid, first_active, last_active
 )
 SELECT

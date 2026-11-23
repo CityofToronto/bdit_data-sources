@@ -1,5 +1,5 @@
-CREATE TABLE gwolofs.detector_inventory (
-    row_id integer NOT NULL DEFAULT nextval('gwolofs.detector_inventory_row_id_seq'::regclass),
+CREATE TABLE vds.detector_inventory (
+    row_id integer NOT NULL DEFAULT nextval('vds.detector_inventory_row_id_seq'::regclass),
     vdsconfig_uid integer,
     entity_location_uid integer,
     division_id smallint,
@@ -22,15 +22,15 @@ CREATE TABLE gwolofs.detector_inventory (
 
 TABLESPACE pg_default;
 
-ALTER TABLE IF EXISTS gwolofs.detector_inventory OWNER TO vds_admins;
+ALTER TABLE IF EXISTS vds.detector_inventory OWNER TO vds_admins;
 
-REVOKE ALL ON TABLE gwolofs.detector_inventory FROM bdit_humans;
+REVOKE ALL ON TABLE vds.detector_inventory FROM bdit_humans;
 
-GRANT SELECT ON TABLE gwolofs.detector_inventory TO bdit_humans;
+GRANT SELECT ON TABLE vds.detector_inventory TO bdit_humans;
 
-GRANT ALL ON TABLE gwolofs.detector_inventory TO vds_admins;
-GRANT ALL ON SEQUENCE gwolofs.detector_inventory_row_id_seq TO vds_admins;
+GRANT ALL ON TABLE vds.detector_inventory TO vds_admins;
+GRANT ALL ON SEQUENCE vds.detector_inventory_row_id_seq TO vds_admins;
 
-COMMENT ON TABLE gwolofs.detector_inventory IS 'Updated daily by vds_pull_vdsdata DAG.
+COMMENT ON TABLE vds.detector_inventory IS 'Updated daily by vds_pull_vdsdata DAG.
 Pulls data from many VDS tables to simplify sensor selection/id.
 May need to periodically update `expected_bins` column using bdit_data-sources/volumes/vds/exploration/time_gaps.sql';

@@ -1,5 +1,5 @@
 --set some misc smartmicro sensors once to avoid encoding one-off logic into function
-UPDATE gwolofs.detector_inventory AS di
+UPDATE vds.detector_inventory AS di
 SET det_type = CASE WHEN
     (c.detector_id::text ~~ ANY ('{"%YONGE HEATH%","%YONGE DAVISVILLE%","%YONGE AND ROXBOROUGH%"}'::text[]))
     --new lakeshore/spadina smartmicro sensors
@@ -13,6 +13,6 @@ WHERE
     di.vdsconfig_uid = c.uid
     AND di.det_type IS NULL;
 
-UPDATE gwolofs.detector_inventory AS di
+UPDATE vds.detector_inventory AS di
 SET expected_bins = 3
 WHERE det_type = 'Smartmicro Sensors';
