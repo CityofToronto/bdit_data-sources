@@ -9,7 +9,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    INSERT INTO gwolofs.detector_inventory AS di (
+    INSERT INTO vds.detector_inventory AS di (
         vdsconfig_uid, entity_location_uid, division_id, detector_id,
         first_active, last_active, detector_loc, sensor_geom, centreline_id,
         centreline_geom, det_type, det_loc, det_group, direction,
@@ -89,7 +89,7 @@ BEGIN
                 WHEN comms.source_id ILIKE '%houston radar%' THEN 'Radar'
                 WHEN dtypes.det_type = 'RESCU Detectors' THEN 'Inductive'
             END AS det_tech
-    FROM gwolofs.detector_inventory AS pairs
+    FROM vds.detector_inventory AS pairs
     LEFT JOIN vds.vdsconfig AS c
         ON pairs.vdsconfig_uid = c.uid
     LEFT JOIN vds.entity_locations AS e

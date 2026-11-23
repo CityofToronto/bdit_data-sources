@@ -12,7 +12,7 @@ SELECT
 FROM vds.insert_detector_inventory_rows() AS n
 --anti join existing sensors with the same detector_id
 --(only want to show new sensors, not updates)
-LEFT JOIN gwolofs.detector_inventory AS di
+LEFT JOIN vds.detector_inventory AS di
     ON n.detector_id = di.detector_id
     AND n.row_id != di.row_id
 WHERE

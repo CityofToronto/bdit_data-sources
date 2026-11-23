@@ -8,7 +8,7 @@ SECURITY DEFINER
 AS $BODY$
 BEGIN
 
-    UPDATE gwolofs.detector_inventory AS di
+    UPDATE vds.detector_inventory AS di
     SET
         centreline_id = NULL,
         centreline_geom = NULL
