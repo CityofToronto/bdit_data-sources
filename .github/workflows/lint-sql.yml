@@ -2,4 +2,4 @@ name: lint
 on: pull_request
 jobs:
   apply-SQL-linter:
-    uses: Toronto-Big-Data-Innovation-Team/.github/.github/workflows/annotate-modified-SQL.yml@20-python-39-in-sqlfluff-action-is-no-longer-supported
+    uses: Toronto-Big-Data-Innovation-Team/.github/.github/workflows/annotate-modified-SQL.yml@main
