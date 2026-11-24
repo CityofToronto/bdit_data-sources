@@ -265,6 +265,7 @@ def pull_from_sheet(
         LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
         LOGGER.debug(rows)
         conn.execute(insert_stmt)
+        conn.commit()
 
     LOGGER.info('Table %s is done', table)
     return status
