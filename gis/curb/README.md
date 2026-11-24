@@ -46,7 +46,7 @@ For each polygon in `edge_of_roadway`, the script:
 | Level | Rule |
 |---|---|
 | `very low` | The extended line crosses or overlaps another line in the final layer.  |
-| `low` | The line bends by more than 5° near one of its ends, which means the extension direction is not straight (more unreliable), or the angle between the two roads that meet is outside 45–135°* |
+| `low` | 1) The line bends by more than 5° near one of its ends, which means the extension direction is not straight (more unreliable), or 2) intersects with a edge of roadway polyogn that has holes, 3) or the angle between the two roads that meet is outside 45–135°* |
 | `medium` | The angle between the two roads is 60–120° (Not very right angle)|
 | `high` | The angle between the two roads is 75–105°, close to a right angle |
 
@@ -108,3 +108,11 @@ Several parameters in the script can be tweaked, so it could be run with multipl
 ### Identify bulb-out
 
 Bulb-out or road edges that have changing road width can be identified and handle separately. 
+
+### Laneway
+
+Some laneways are currently not handled due to them not being attached to any intersection polygon. Could possible handle them using ST_intersects to figure which laneway is touching which road edge, then remove the overlapping line to create curb line. 
+
+### Automation
+
+Edge of road polygon is updated quarterly. Automation of identifying changes in the layer, running the script, and filtering out only the parts that was updated would be helpful for staff to validate only the subset of curbs that changed.

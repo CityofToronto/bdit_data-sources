@@ -467,3 +467,19 @@ SET confidence_level = CASE c.confidence_rank
 FROM road_confidence c
 WHERE e.line_id = c.road_line_id
   AND e.source = 'extended';
+
+-- update polygons with hole to be low confidence
+-- to flag for human verification
+UPDATE gis.curb_extended
+SET confidence_level = 'low'
+FROM (
+    SELECT DISTINCT (regexp_split_to_array(road_line_id, '_'))[1] AS holes_id
+    FROM gis.curb_shared_edges
+    INNER JOIN (
+        SELECT _id
+        FROM natalie.edge_of_roadway
+        WHERE ST_NRings(geom) > ST_NumGeometries(geom)
+    ) AS rings
+        ON (regexp_split_to_array(intersection_line_id, '_'))[1] = _id::text
+) AS holes
+WHERE (regexp_split_to_array(line_id, '_'))[1] = holes.holes_id and confidence_level != 'very low';
