@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS open_data.cycling_permanent_counts_locations
     last_active date,
     date_decommissioned date,
     technology text COLLATE pg_catalog."default",
+    bidirectional boolean,
     CONSTRAINT cycling_permanent_counts_locations_pkey PRIMARY KEY (
         location_dir_id
     ),

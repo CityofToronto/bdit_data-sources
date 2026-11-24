@@ -261,7 +261,7 @@ Row count: 73
 | includes_contraflow | boolean | True | Does the flow also count travel in the reverse of the indicated flow direction? TRUE indicates that the flow, though installed in one-way infrastucture like a standard bike lane, also counts travel going the wrong direction within that lane. FALSE could indicate the sensor does not count contraflow OR only counts contraflow. |
 | replaces_flow_id | numeric | | `flow_id` of earlier flow that this one replaces |
 | replaced_by_flow_id | numeric | 353363669 | `flow_id` of flow this one is replaced by |
-| flow_direction | text | Westbound | Direction of travel. If this is a dedicated contraflow flow_id, the flow_direction should be opposite the direction_main. |
+| flow_direction | travel_direction | Westbound | Direction of travel. If this is a dedicated contraflow flow_id, the flow_direction should be opposite the direction_main. |
 | flow_geom | geometry | | A two-node line, where the first node indicates the position of the sensor and the second indicates the normal direction of travel over that sensor relative to the first node. I.e. the line segment is an arrow pointing in the direction of travel. |
 | bin_size | interval | 0 days 00:15:00 | temporal bins are either 15 or 30 minutes, depending on the sensor |
 | notes | text | | |
