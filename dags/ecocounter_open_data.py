@@ -8,6 +8,8 @@ import logging
 import pendulum
 from functools import partial
 
+from slack_sdk import WebClient
+
 from airflow.sdk.bases.hook import BaseHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.standard.sensors.date_time import DateTimeSensor
@@ -20,6 +22,8 @@ try:
     from dags.dag_owners import owners
     from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, send_slack_msg, get_readme_docmd
     from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
+    from bdit_dag_utils.utils.send_slack_imgs import send_msg_with_images
+    from volumes.ecocounter.data_checks.create_data_spike_graphs import create_data_spike_graphs
 except ModuleNotFoundError:
     raise ImportError("Cannot import DAG helper functions.")
 except ImportError:
@@ -34,6 +38,7 @@ DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 EXPORT_PATH = '/home/airflow/open_data/permanent-bike-counters' #'/data/open_data/permanent-bike-counters'
+GRAPH_EXPORT_PATH = '/data/home/dboucau/notes/1528/outputs' #replace this in pull request
 BASH_ENV = {
     'HOST': '{{ conn.ecocounter_bot.host }}',
     'LOGIN': '{{ conn.ecocounter_bot.login }}',
@@ -99,6 +104,7 @@ def ecocounter_open_data_dag():
             task_id="check_anomalous_ranges",
             sql=f"SELECT * FROM dboucau.open_data_anomalous_ranges_check()",
             conn_id="ecocounter_bot",
+            trigger_rule='all_done'
         )
     check_anomalous_ranges.doc_md = '''
     Flag any counts in the open_data tables which fall within ecocounter.anomalous_ranges
@@ -109,10 +115,34 @@ def ecocounter_open_data_dag():
             task_id="check_previous_years",
             sql=f"SELECT * FROM dboucau.open_data_previous_years_check()",
             conn_id="ecocounter_bot",
+            trigger_rule='all_done'
         )
     check_previous_years.doc_md = '''
     Flag any changes which occured in the last month and would require the DAG to be run for previous years
     '''
+
+    @task(trigger_rule='all_done', doc_md="""Check for any data spikes or 0 volumes in the past two months and create and save relevant graphs.""")
+    def check_data_spikes(**context):
+
+        # prepare slack connection
+        #proxy = f"http://{BaseHook.get_connection('slack').password}@proxy.toronto.ca:8080"
+        SLACK_TOKEN = BaseHook.get_connection("slack_token").password
+        client = WebClient(token=SLACK_TOKEN
+        #                    #, proxy=proxy
+                           )
+ 
+        file_list = create_data_spike_graphs(conn_id="ecocounter_bot", outpath=GRAPH_EXPORT_PATH)
+
+        msg=f":eco-counter: Ecocounter QC visualizations ready, fresh from the oven :cook:. Please check the {len(file_list)} visualizations saved at {GRAPH_EXPORT_PATH} prior to publication. :eco-counter:"
+        
+
+        # send_slack_msg(
+        #     context=context,
+        #     msg=msg,
+        #     use_proxy=False
+        # )
+
+        send_msg_with_images(client, file_list, msg, "slack_prj_permanent_sensors")
     
     @task()
     def get_years(ds=None):
@@ -121,113 +151,113 @@ def ecocounter_open_data_dag():
         yrs = [mnth.year, prev_mnth.year]
         return list(set(yrs)) #unique
     
-    @task_group()
-    def insert_and_download_data(yr):
-        @task(map_index_template="{{ yr }}")
-        def insert_daily(yr):
-            context = get_current_context()
-            context["yr"] = yr
-            t = SQLExecuteQueryOperator(
-                sql=f"SELECT ecocounter.open_data_daily_counts_insert({yr}::int)",
-                task_id='insert_daily_open_data',
-                conn_id='ecocounter_bot',
-                autocommit=True,
-                retries = 0
-            )
-            return t.execute(context=context)
+    # @task_group()
+    # def insert_and_download_data(yr):
+    #     @task(map_index_template="{{ yr }}")
+    #     def insert_daily(yr):
+    #         context = get_current_context()
+    #         context["yr"] = yr
+    #         t = SQLExecuteQueryOperator(
+    #             sql=f"SELECT ecocounter.open_data_daily_counts_insert({yr}::int)",
+    #             task_id='insert_daily_open_data',
+    #             conn_id='ecocounter_bot',
+    #             autocommit=True,
+    #             retries = 0
+    #         )
+    #         return t.execute(context=context)
 
-        @task(map_index_template="{{ yr }}")
-        def insert_15min(yr):
-            context = get_current_context()
-            context["yr"] = yr
-            t = SQLExecuteQueryOperator(
-                sql=f"SELECT ecocounter.open_data_15min_counts_insert({yr}::int)",
-                task_id='insert_15min_open_data',
-                conn_id='ecocounter_bot',
-                autocommit=True,
-                retries = 0
-            )
-            return t.execute(context=context)
+    #     @task(map_index_template="{{ yr }}")
+    #     def insert_15min(yr):
+    #         context = get_current_context()
+    #         context["yr"] = yr
+    #         t = SQLExecuteQueryOperator(
+    #             sql=f"SELECT ecocounter.open_data_15min_counts_insert({yr}::int)",
+    #             task_id='insert_15min_open_data',
+    #             conn_id='ecocounter_bot',
+    #             autocommit=True,
+    #             retries = 0
+    #         )
+    #         return t.execute(context=context)
         
-        @task.bash(env = BASH_ENV)
-        def download_daily_open_data()->str:
-            return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
-                "SELECT
-                    location_dir_id, location_name, direction, linear_name_full,
-                    side_street, dt, daily_volume
-                FROM open_data.cycling_permanent_counts_daily
-                WHERE dt < LEAST(date_trunc('month', now()))
-                ORDER BY location_dir_id, dt;" \
-                --csv -o "$EXPORT_PATH/cycling_permanent_counts_daily.csv"'''
+    #     @task.bash(env = BASH_ENV)
+    #     def download_daily_open_data()->str:
+    #         return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
+    #             "SELECT
+    #                 location_dir_id, location_name, direction, linear_name_full,
+    #                 side_street, dt, daily_volume
+    #             FROM open_data.cycling_permanent_counts_daily
+    #             WHERE dt < LEAST(date_trunc('month', now()))
+    #             ORDER BY location_dir_id, dt;" \
+    #             --csv -o "$EXPORT_PATH/cycling_permanent_counts_daily.csv"'''
 
-        @task.bash(
-            env = BASH_ENV,
-            map_index_template="{{ yr }}"
-        )
-        def download_15min_open_data(yr)->str:
-            context = get_current_context()
-            context["yr"] = yr
-            return f'''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
-                "SELECT location_dir_id, datetime_bin, bin_volume
-                FROM open_data.cycling_permanent_counts_15min
-                WHERE
-                    datetime_bin >= to_date({yr}::text, 'yyyy')
-                    AND datetime_bin < LEAST(date_trunc('month', now()), to_date(({yr}+1)::text, 'yyyy'))
-                ORDER BY location_dir_id, datetime_bin;" \
-                --csv -o "$EXPORT_PATH/cycling_permanent_counts_15min_{yr}_{yr+1}.csv"'''
+    #     @task.bash(
+    #         env = BASH_ENV,
+    #         map_index_template="{{ yr }}"
+    #     )
+    #     def download_15min_open_data(yr)->str:
+    #         context = get_current_context()
+    #         context["yr"] = yr
+    #         return f'''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
+    #             "SELECT location_dir_id, datetime_bin, bin_volume
+    #             FROM open_data.cycling_permanent_counts_15min
+    #             WHERE
+    #                 datetime_bin >= to_date({yr}::text, 'yyyy')
+    #                 AND datetime_bin < LEAST(date_trunc('month', now()), to_date(({yr}+1)::text, 'yyyy'))
+    #             ORDER BY location_dir_id, datetime_bin;" \
+    #             --csv -o "$EXPORT_PATH/cycling_permanent_counts_15min_{yr}_{yr+1}.csv"'''
         
-        #insert only latest year data, but download everything (single file)
-        insert_daily(yr) >> download_daily_open_data()
-        insert_15min(yr) >> download_15min_open_data(yr)
+    #     #insert only latest year data, but download everything (single file)
+    #     insert_daily(yr) >> download_daily_open_data()
+    #     insert_15min(yr) >> download_15min_open_data(yr)
     
-    @task_group()
-    def update_locations_tg():
-        #this task depends on insert_daily
-        update_locations = SQLExecuteQueryOperator(
-            sql=f"SELECT ecocounter.open_data_locations_insert()",
-            task_id='update_locations',
-            conn_id='ecocounter_bot',
-            autocommit=True,
-            retries = 0
-        )
+    # @task_group()
+    # def update_locations_tg():
+    #     #this task depends on insert_daily
+    #     update_locations = SQLExecuteQueryOperator(
+    #         sql=f"SELECT ecocounter.open_data_locations_insert()",
+    #         task_id='update_locations',
+    #         conn_id='ecocounter_bot',
+    #         autocommit=True,
+    #         retries = 0
+    #     )
 
-        @task.bash(env = BASH_ENV)
-        def download_locations_open_data()->str:
-            return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
-                    "SELECT location_dir_id, location_name, direction, linear_name_full, side_street,
-                        longitude, latitude, centreline_id, bin_size, latest_calibration_study,
-                        first_active, last_active, date_decommissioned, technology
-                    FROM open_data.cycling_permanent_counts_locations
-                    ORDER BY location_dir_id;" \
-                    --csv -o "$EXPORT_PATH/cycling_permanent_counts_locations.csv"'''
+        # @task.bash(env = BASH_ENV)
+        # def download_locations_open_data()->str:
+        #     return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
+        #             "SELECT location_dir_id, location_name, direction, linear_name_full, side_street,
+        #                 longitude, latitude, centreline_id, bin_size, latest_calibration_study,
+        #                 first_active, last_active, date_decommissioned, technology
+        #             FROM open_data.cycling_permanent_counts_locations
+        #             ORDER BY location_dir_id;" \
+        #             --csv -o "$EXPORT_PATH/cycling_permanent_counts_locations.csv"'''
                     
-        @task.bash(env = BASH_ENV)
-        def download_locations_open_data_geojson()->str:
-            return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
-        "SELECT featurecollection FROM open_data.cycling_permanent_counts_locations_geojson;" \
-        --tuples-only -o "$EXPORT_PATH/cycling_permanent_counts_locations.geojson"'''
+        # @task.bash(env = BASH_ENV)
+        # def download_locations_open_data_geojson()->str:
+        #     return '''/usr/bin/psql -h $HOST -U $LOGIN -d bigdata -c \
+        # "SELECT featurecollection FROM open_data.cycling_permanent_counts_locations_geojson;" \
+        # --tuples-only -o "$EXPORT_PATH/cycling_permanent_counts_locations.geojson"'''
         
-        update_locations >> download_locations_open_data() >> download_locations_open_data_geojson()
+        # update_locations >> download_locations_open_data() >> download_locations_open_data_geojson()
 
-    @task.bash()
-    def output_readme()->str:
-        source=f'{repo_path}/volumes/open_data/sql/cycling_permanent_counts_readme.md'
-        dest='cycling_permanent_counts_readme.pdf'
-        return f'''pandoc -V geometry:margin=1in -o "{EXPORT_PATH}/{dest}" "{source}"'''
+    # @task.bash()
+    # def output_readme()->str:
+    #     source=f'{repo_path}/volumes/open_data/sql/cycling_permanent_counts_readme.md'
+    #     dest='cycling_permanent_counts_readme.pdf'
+    #     return f'''pandoc -V geometry:margin=1in -o "{EXPORT_PATH}/{dest}" "{source}"'''
     
-    @task(
-        retries=0,
-        trigger_rule='all_success',
-        doc_md="""A status message to report DAG success."""
-    )
-    def status_message(ds = None, **context):
-        mnth = ds_format(ds, '%Y-%m-%d', '%Y-%m-01')
-        send_slack_msg(
-            context=context,
-            msg=f"Ecocounter :open_data_to: DAG ran successfully for {mnth} :white_check_mark:. "
-            f"Remember to `cp {EXPORT_PATH}/* /data/open_data/permanent-bike-counters` as bigdata.",
-            use_proxy=True
-        )
+    # @task(
+    #     retries=0,
+    #     trigger_rule='all_success',
+    #     doc_md="""A status message to report DAG success."""
+    # )
+    # def status_message(ds = None, **context):
+    #     mnth = ds_format(ds, '%Y-%m-%d', '%Y-%m-01')
+    #     send_slack_msg(
+    #         context=context,
+    #         msg=f"Ecocounter :open_data_to: DAG ran successfully for {mnth} :white_check_mark:. "
+    #         f"Remember to `cp {EXPORT_PATH}/* /data/open_data/permanent-bike-counters` as bigdata.",
+    #         use_proxy=True
+    #     )
     
     yrs = get_years()
     (
@@ -235,12 +265,14 @@ def ecocounter_open_data_dag():
         reminder_message() >>
         check_anomalous_ranges >>
         check_previous_years >>
-        wait_till_10th >> [
-            insert_and_download_data.expand(yr = yrs),
-            output_readme()
-        ] >>
-        update_locations_tg() >>
-        status_message()
+        check_data_spikes()
+        # >>
+        # wait_till_10th >> [
+        #     insert_and_download_data.expand(yr = yrs),
+        #     output_readme()
+        # ] >>
+        # update_locations_tg() >>
+        # status_message()
     )
         
 ecocounter_open_data_dag()
