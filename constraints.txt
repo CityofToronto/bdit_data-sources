@@ -1,4 +1,4 @@
-
+# https://raw.githubusercontent.com/apache/airflow/constraints-3.3.2/constraints-no-providers-3.11.txt
 #
 # This constraints file was automatically generated on 2026-09-13T13:47:35.380619
 # via `uv sync --resolution highest` for the "v3-3-test" branch of Airflow.

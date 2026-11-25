@@ -13,7 +13,7 @@ pip-tools==7.7.0
 pandas
 holidays==0.31
 requests-oauthlib
-geopandas=1.0.1
+geopandas==1.0.1
 google-api-python-client
 
 # development
