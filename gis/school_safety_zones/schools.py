@@ -25,7 +25,7 @@ from sqlalchemy import create_engine, Table, Column, MetaData, delete
 from sqlalchemy.engine import URL
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
-    
+
 
 """The following accesses credentials from key.json (a file created from the google account used to read the sheets) 
 and read the spreadsheets.
@@ -159,6 +159,25 @@ def is_int(n):
             return False
         return True
 
+def get_engine(conn_id=None, cfg_path=None):
+    if cfg_path:
+        config = configparser.ConfigParser()
+        if not config.read(cfg_path):
+            raise FileNotFoundError(f"Could not read {cfg_path}")
+        c = config["SQLALCHEMY"]
+    
+        url = URL.create(
+            drivername="postgresql+psycopg",
+            username=c["user"],
+            password=c["password"],
+            host=c["host"],
+            port=int(c.get("port", 5432)),
+            database=c["database"],
+        )
+        return create_engine(url)
+        
+    from airflow.providers.postgres.hooks.postgres import PostgresHook
+    return PostgresHook(conn_id).get_sqlalchemy_engine()
 
 def pull_from_sheet(
     engine,
@@ -265,7 +284,6 @@ def pull_from_sheet(
         LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
         LOGGER.debug(rows)
         conn.execute(insert_stmt)
-        conn.commit()
 
     LOGGER.info('Table %s is done', table)
     return status
