@@ -16,10 +16,10 @@ def create_data_spike_graphs(conn_id, outpath):
     engine = PostgresHook(conn_id).get_sqlalchemy_engine()
 
     # grab all relevant sites
-    complete_sites = pd.read_sql("SELECT DISTINCT (site_id) FROM ecocounter.flows WHERE flow_id IN (SELECT flow_id FROM dboucau.open_data_pull_data_spikes())", 
+    complete_sites = pd.read_sql("SELECT DISTINCT (site_id) FROM ecocounter.flows WHERE flow_id IN (SELECT flow_id FROM ecocounter.open_data_pull_data_spikes())", 
                         engine)
     # identify spikes from function
-    spikes_and_zeros = pd.read_sql("SELECT * FROM dboucau.open_data_pull_data_spikes()", 
+    spikes_and_zeros = pd.read_sql("SELECT * FROM ecocounter.open_data_pull_data_spikes()", 
                         engine)
     
     counts_query = """
@@ -93,11 +93,10 @@ def create_data_spike_graphs(conn_id, outpath):
             flow_id,
             flow_direction,
             flow_type,
-            mode_counted
-        ), mean_volume in grouped.items():
+            mode_counted), mean_volume in grouped.items():
 
             colour = colours[i]
-            i += 1
+            
 
             temp_volumes = (
                 daily_flow_counts[
@@ -177,6 +176,8 @@ def create_data_spike_graphs(conn_id, outpath):
                 alpha=0.5,
                 label=None
             )
+
+            i += 1
 
         # Custom legend entries for anomaly markers
         custom_handles = [
