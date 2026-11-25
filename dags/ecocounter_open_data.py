@@ -38,7 +38,7 @@ DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 EXPORT_PATH = '/home/airflow/open_data/permanent-bike-counters' #'/data/open_data/permanent-bike-counters'
-GRAPH_EXPORT_PATH = '/data/home/dboucau/notes/1528/outputs' #replace this in pull request
+GRAPH_EXPORT_PATH = '/home/dboucau/repo/bdit_data-sources/volumes/ecocounter/img/data_spikes' #replace this in pull request
 BASH_ENV = {
     'HOST': '{{ conn.ecocounter_bot.host }}',
     'LOGIN': '{{ conn.ecocounter_bot.login }}',
@@ -100,7 +100,7 @@ def ecocounter_open_data_dag():
     """
 
     check_anomalous_ranges = SQLCheckOperatorWithReturnValue(
-            on_failure_callback=partial(slack_alert_data_quality, channel="slack_prj_permanent_sensors"),
+            on_failure_callback=partial(slack_alert_data_quality, use_proxy=True, channel="slack_prj_permanent_sensors"),
             task_id="check_anomalous_ranges",
             sql=f"SELECT * FROM dboucau.open_data_anomalous_ranges_check()",
             conn_id="ecocounter_bot",
@@ -111,7 +111,7 @@ def ecocounter_open_data_dag():
     '''
 
     check_previous_years = SQLCheckOperatorWithReturnValue(
-            on_failure_callback=partial(slack_alert_data_quality, channel="slack_prj_permanent_sensors"),
+            on_failure_callback=partial(slack_alert_data_quality, use_proxy=True, channel="slack_prj_permanent_sensors"),
             task_id="check_previous_years",
             sql=f"SELECT * FROM dboucau.open_data_previous_years_check()",
             conn_id="ecocounter_bot",
@@ -125,10 +125,10 @@ def ecocounter_open_data_dag():
     def check_data_spikes(**context):
 
         # prepare slack connection
-        #proxy = f"http://{BaseHook.get_connection('slack').password}@proxy.toronto.ca:8080"
+        proxy = f"http://{BaseHook.get_connection('slack').password}@proxy.toronto.ca:8080"
         SLACK_TOKEN = BaseHook.get_connection("slack_token").password
         client = WebClient(token=SLACK_TOKEN
-        #                    #, proxy=proxy
+                            #, proxy=proxy
                            )
  
         file_list = create_data_spike_graphs(conn_id="ecocounter_bot", outpath=GRAPH_EXPORT_PATH)
