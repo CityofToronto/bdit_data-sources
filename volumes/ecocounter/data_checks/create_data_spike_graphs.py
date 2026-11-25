@@ -105,6 +105,23 @@ def create_data_spike_graphs(conn_id, outpath):
                 .sort_values('date_bin')
             )
 
+            # Re-index for consistent x-axis + date gaps
+            end_date = pd.Timestamp.now().normalize()
+            start_date = end_date - pd.DateOffset(months=2)
+
+            temp_volumes = (
+                temp_volumes
+                .set_index('date_bin')
+                .reindex(
+                    pd.date_range(
+                        start_date,
+                        end_date,
+                        freq='D'
+                    )
+                ).reset_index()
+                .rename(columns={'index': 'date_bin'})
+            )
+
             linestyle = '--' if flow_type == 'counterflow' else '-'
 
             label = (
