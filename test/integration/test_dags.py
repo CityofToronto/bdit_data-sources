@@ -11,7 +11,7 @@ import re
 from datetime import datetime
 import pytest
 from unittest import mock
-from airflow.models import DagBag
+from airflow.dag_processing.dagbag import DagBag
 from airflow.models.connection import Connection
 
 
@@ -52,8 +52,7 @@ AIRFLOW_CONNECTIONS = {
 )
 @mock.patch("psycopg.connect")
 def get_dagbag(mock_connect):
-    return DagBag(include_examples=False, dag_folder=DAG_FOLDER)
-
+    return DagBag(dag_folder=DAG_FOLDER)
 
 dag_bag = get_dagbag()
 
