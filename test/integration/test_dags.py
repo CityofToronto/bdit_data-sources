@@ -41,7 +41,7 @@ AIRFLOW_CONNECTIONS = {
     'AIRFLOW_CONN_HERE_BOT': SAMPLE_CONN.get_uri(),
     'AIRFLOW_CONN_RESCU_BOT': SAMPLE_CONN.get_uri(),
     'AIRFLOW_CONN_VZ_API_BOT': SAMPLE_CONN.get_uri(),
-    'AIRFLOW_CONN_GOOGLE_SHEETS_API': SAMPLE_CONN.get_uri(),
+    'AIRFLOW_CONN_GOOGLE_SHEETS_GENERIC': SAMPLE_CONN.get_uri(),
     'AIRFLOW_CONN_ECOCOUNTER_BOT': SAMPLE_CONN.get_uri(),
 }
 
@@ -51,8 +51,7 @@ AIRFLOW_CONNECTIONS = {
     AIRFLOW_VARIABLES | AIRFLOW_CONNECTIONS
 )
 @mock.patch("psycopg.connect")
-@mock.patch("airflow.providers.google.common.hooks.base_google.GoogleBaseHook.get_credentials")
-def get_dagbag(mock_connect, mock_google_hook):
+def get_dagbag(mock_connect):
     return DagBag(include_examples=False, dag_folder=DAG_FOLDER)
 
 
