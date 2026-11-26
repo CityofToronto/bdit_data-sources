@@ -481,5 +481,6 @@ FROM (
         WHERE ST_NRings(geom) > ST_NumGeometries(geom)
     ) AS rings
         ON (regexp_split_to_array(intersection_line_id, '_'))[1] = _id::text
+        or (regexp_split_to_array(road_line_id, '_'))[1] = _id::text
 ) AS holes
 WHERE (regexp_split_to_array(line_id, '_'))[1] = holes.holes_id and confidence_level != 'very low';
