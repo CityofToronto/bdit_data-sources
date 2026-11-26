@@ -17,13 +17,13 @@ from googleapiclient.discovery import build
 from airflow.sdk import dag, task, get_current_context, Variable, Param
 from airflow.sdk.exceptions import AirflowFailException
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 
 # import custom operators and helper functions
 repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.insert(0, repo_path)
 from dags.dag_owners import owners
 # pylint: disable=wrong-import-position
+from dags.google_connection import get_google_credentials
 from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert
 from gis.school_safety_zones.schools import pull_from_sheet
 # pylint: enable=wrong-import-position
@@ -89,7 +89,7 @@ def get_vz_data():
         context["task_year"] = spreadsheet["year"]
         
         #to get credentials to access google sheets, database
-        google_cred = GoogleBaseHook('google_sheets_api').get_credentials()
+        google_cred = get_google_credentials(conn_id="google_sheets_generic")
         service=build('sheets', 'v4', credentials=google_cred, cache_discovery=False)
         engine=PostgresHook("vz_api_bot").get_sqlalchemy_engine()
         

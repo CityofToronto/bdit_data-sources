@@ -23,7 +23,7 @@ import click
 import configparser
 from sqlalchemy import create_engine, Table, Column, MetaData, delete
 from sqlalchemy.engine import URL
-from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
+from dags.google_connection import get_google_credentials
 from googleapiclient.discovery import build
     
 
@@ -331,7 +331,7 @@ def pull_from_sheet_cli(
     connect_url = URL.create("postgresql+psycopg2", **config['DBSETTINGS'])
     engine = create_engine(connect_url)
 
-    google_cred = GoogleBaseHook('google_sheets_api').get_credentials()
+    google_cred = get_google_credentials(conn_id="google_sheets_generic")
 
     if table is None:
         table = f"school_safety_zone_{year}_raw"
