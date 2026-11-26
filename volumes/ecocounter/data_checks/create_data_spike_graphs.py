@@ -150,18 +150,6 @@ def create_data_spike_graphs(conn_id, outpath):
                 alpha=0.5
             )
 
-            # Mean annotation on top flow
-            if i == 0:
-                ax.text(
-                    temp_volumes['date_bin'].max(),
-                    mean_volume,
-                    f"mean volume",
-                    color=colour,
-                    fontsize=8,
-                    ha='right',
-                    va='bottom'
-                )
-
             temp_spikes = spikes_and_zeros[
                 (spikes_and_zeros.flow_id == flow_id)
                 & (spikes_and_zeros.anomaly == 'data_spike')
@@ -213,6 +201,14 @@ def create_data_spike_graphs(conn_id, outpath):
                 linestyle='None',
                 markersize=10,
                 label='volume=0'
+            ),
+            Line2D(
+                [0], [0],
+                marker=None,
+                color='grey',
+                linestyle=':',
+                markersize=10,
+                label='volume=0'
             )
         ]
 
@@ -222,7 +218,8 @@ def create_data_spike_graphs(conn_id, outpath):
             handles + custom_handles,
             labels + [
                 'data spike (+/- 3 * std)',
-                'volume=0'
+                'volume=0',
+                'mean_volume'
             ],
             fontsize=8,
             bbox_to_anchor=(1.02, 1),
