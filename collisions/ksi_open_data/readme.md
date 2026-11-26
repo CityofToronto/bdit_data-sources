@@ -90,8 +90,14 @@ The staging table, refrehsed with the most up-to-date data. The above data check
 Compare the two tables to identify the discrepancy, then decide whether it is expected behaviour or an error that needs dixing.
 
 ### When a decision is finalized
-- If the change is intended: Click the link in the airflow alert and click `Approve`. This pipeline will continue and update Open Data table.
-- If the change is not intened and requires revised verification: Click `Reject`. The Open Data table will not be refreshed. Then fix the upstream issue, and the collisino replicator that runs every morning will update the upstream table. Next day's check should then pass. 
+
+- If the change is intentional: 
+
+Click the link in the airflow alert and click `Approve`. This pipeline will continue and update Open Data table.
+
+- If the change is not intentional and requires revised verification: 
+
+Click `Reject`. The Open Data table will not be refreshed. Then fix the upstream issue, and the collision replicator that runs every morning will update the upstream table. Next day's check should then pass. 
 
 
 ## Pipeline
