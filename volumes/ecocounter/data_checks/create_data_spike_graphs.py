@@ -16,10 +16,10 @@ def create_data_spike_graphs(conn_id, outpath):
     engine = PostgresHook(conn_id).get_sqlalchemy_engine()
 
     # grab all relevant sites
-    complete_sites = pd.read_sql("SELECT DISTINCT (site_id) FROM ecocounter.flows WHERE flow_id IN (SELECT flow_id FROM ecocounter.open_data_pull_data_spikes())", 
+    complete_sites = pd.read_sql("SELECT DISTINCT (site_id) FROM ecocounter.flows WHERE flow_id IN (SELECT flow_id FROM ecocounter.identify_data_spikes())", 
                         engine)
     # identify spikes from function
-    spikes_and_zeros = pd.read_sql("SELECT * FROM ecocounter.open_data_pull_data_spikes()", 
+    spikes_and_zeros = pd.read_sql("SELECT * FROM ecocounter.identify_data_spikes()", 
                         engine)
     
     counts_query = """
