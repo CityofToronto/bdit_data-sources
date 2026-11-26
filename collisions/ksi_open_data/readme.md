@@ -61,17 +61,44 @@ We publish KSI data (Killed or Seriously Injuried) to [Open Data](https://open.t
 
 2. Checks for deleted collisions from previous day
 
-3. Checks for deleted collisions and person pair from previous day
+3. Checks for deleted involved person from previous day
 
 4. Checks for duplicated collision records
 
-5. Checks for duplicated collision and person pair
+5. Checks for duplicated collision and involved person
 
 6. Checks for duplicated or skipped fatal_no in a year
 
 7. Checks for fatal_no assigned to non-fatal involved person
 
 All these check might be valid changes that got carried through from verification processes. When check fails, an alert will be send to slack for humans to confirm that these discrepancy is intended, then with `human in the loop` operators, users with permission can approve the pipeline to continue with refreshes and updates.
+
+## When human actions are required
+
+If any of the above data checks failed during the daily refresh, the open data table will not be updated until a human's approval. The slack alert includes information needed to investigate, e.g. `collision_id` with skipped fatal_no, or the `collision_id` of a deleted collision.
+
+These two tables are useful for debugging:
+
+- `open_data.ksi`
+
+The table containing the data last sent to Open Data. When a refresh is paused, this table contains the previously published data. If the failed check was for a deleted collisoin, the deleted collision_id will still appear here.
+
+- `open_data_staging.ksi`
+
+The staging table, refrehsed with the most up-to-date data. The above data checks run against this materialized view. 
+
+Compare the two tables to identify the discrepancy, then decide whether it is expected behaviour or an error that needs dixing.
+
+### When a decision is finalized
+
+- If the change is intentional: 
+
+Click the link in the airflow alert and click `Approve`. This pipeline will continue and update Open Data table.
+
+- If the change is not intentional and requires revised verification: 
+
+Click `Reject`. The Open Data table will not be refreshed. Then fix the upstream issue, and the collision replicator that runs every morning will update the upstream table. Next day's check should then pass. 
+
 
 ## Pipeline
 
