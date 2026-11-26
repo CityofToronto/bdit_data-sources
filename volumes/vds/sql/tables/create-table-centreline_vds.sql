@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS vds.centreline_vds
 (
-    centreline_id bigint NOT NULL,
+    centreline_id bigint, --allow centreline_id to be null to specify centrelines that do no exist
     vdsconfig_uid integer NOT NULL,
     CONSTRAINT centreline_vds_pkey PRIMARY KEY (vdsconfig_uid),
     CONSTRAINT centreline_vds_vdsconfig_uid_fkey FOREIGN KEY (vdsconfig_uid)
@@ -23,3 +23,15 @@ GRANT SELECT ON TABLE vds.centreline_vds TO vds_bot;
 COMMENT ON TABLE vds.centreline_vds IS E''
 'Table to store VDS sensors - centreline equivalency. '
 'See `vds.detector_inventory` mat view for ease of use.';
+
+CREATE OR REPLACE TRIGGER update_detector_inventory_centreline
+AFTER INSERT OR UPDATE
+ON vds.centreline_vds
+FOR EACH ROW
+EXECUTE FUNCTION vds.update_detector_inventory_centreline();
+
+CREATE OR REPLACE TRIGGER delete_detector_inventory_centreline
+AFTER DELETE
+ON vds.centreline_vds
+FOR EACH ROW
+EXECUTE FUNCTION vds.delete_detector_inventory_centreline();
