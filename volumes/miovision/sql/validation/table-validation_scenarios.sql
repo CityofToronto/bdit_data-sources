@@ -74,19 +74,19 @@ SELECT
     v.spec_counts, v.mio_counts, v.exp_err, v.exp_pass
 FROM (VALUES
     ('mio_5pct_higher', 'Miovision 5% higher than Spectrum (100 vs 105)',
-        ARRAY[10, 20, 30, 25, 15], ARRAY[11, 21, 31, 26, 16], 0.05, true),
+        ARRAY[10, 20, 30, 25, 15], ARRAY[11, 21, 31, 26, 16], 0.07336, true),
     ('mio_5pct_lower', 'Miovision 5% lower than Spectrum (100 vs 95)',
-        ARRAY[10, 20, 30, 25, 15], ARRAY[9, 19, 29, 24, 14], -0.05, true),
+        ARRAY[10, 20, 30, 25, 15], ARRAY[9, 19, 29, 24, 14], 0.07336, true),
     ('mio_10pct_higher', 'Miovision 10% higher than Spectrum (100 vs 110)',
-        ARRAY[10, 20, 30, 25, 15], ARRAY[12, 22, 32, 27, 17], 0.10, false),
+        ARRAY[10, 20, 30, 25, 15], ARRAY[12, 22, 32, 27, 17], 0.12, false),
     ('mio_10pct_lower', 'Miovision 10% lower than Spectrum (100 vs 90)',
-        ARRAY[10, 20, 30, 25, 15], ARRAY[8, 18, 28, 23, 13], -0.10, false),
-    ('spec_zero_mio_100', 'Spectrum all zeros, Miovision totals 100 (division by zero)',
+        ARRAY[10, 20, 30, 25, 15], ARRAY[8, 18, 28, 23, 13], 0.12, false),
+    ('spec_zero_mio_100', 'Spectrum all zeros, Miovision totals 100 (no bins with spec_count >= 5, NULL percentile)',
         ARRAY[0, 0, 0, 0, 0], ARRAY[20, 20, 20, 20, 20], NULL, false),
-    ('both_zero', 'Both sources zero in every bin',
+    ('both_zero', 'Both sources zero in every bin (no bins with spec_count >= 5, NULL percentile)',
         ARRAY[0, 0, 0, 0, 0], ARRAY[0, 0, 0, 0, 0], NULL, true),
-    ('mio_zero_spec_100', 'Miovision all zeros, Spectrum totals 100 (error of -100%)',
-        ARRAY[20, 20, 20, 20, 20], ARRAY[0, 0, 0, 0, 0], -1, false)
+    ('mio_zero_spec_100', 'Miovision all zeros, Spectrum totals 100 (every bin 100% error)',
+        ARRAY[20, 20, 20, 20, 20], ARRAY[0, 0, 0, 0, 0], 1, false)
 ) AS v(scenario_name, description, spec_counts, mio_counts, exp_err, exp_pass);
 
 

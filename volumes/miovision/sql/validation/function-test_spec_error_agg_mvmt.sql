@@ -245,4 +245,4 @@ BEGIN
 END;
 $$;
 
-SELECT * FROM miovision_validation.test_spec_error_agg_mvmt()
+SELECT * FROM miovision_validation.test_spec_error_agg_mvmt() WHERE passed IS False
