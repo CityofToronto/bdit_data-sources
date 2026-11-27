@@ -265,10 +265,10 @@ def pull_from_sheet(
     
     metadata = MetaData(schema = schema)
 
-    # column types are all Text
-    columns = [
-        Column(col, Text)
-        for col in [
+    t = Table(
+        table,
+        metadata,
+        *[Column(c) for c in [
             "school_name",
             "address",
             "work_order_fb",
@@ -277,21 +277,16 @@ def pull_from_sheet(
             "final_sign_installation",
             "locations_fb",
             "locations_wyss"
+            ]
         ]
-    ]
-
-    t = Table(
-        table,
-        metadata,
-        *columns
     )
 
-    # check if table exists, create table if it does not exist
+    # check if table exists, warns if it does not exist
     insp = inspect(engine)
 
     if not insp.has_table(table, schema=schema):
-        LOGGER.info("Creating table %s.%s", schema, table)
-        metadata.create_all(engine)
+        LOGGER.warning("Table %s does not exist!", table)
+    #    metadata.create_all(engine)
 
     # truncate table and insert rows
     truncate_stmt = delete(t)
