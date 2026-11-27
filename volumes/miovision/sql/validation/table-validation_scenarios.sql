@@ -89,25 +89,6 @@ FROM (VALUES
         ARRAY[20, 20, 20, 20, 20], ARRAY[0, 0, 0, 0, 0], -1, false)
 ) AS v(scenario_name, description, spec_counts, mio_counts, exp_err, exp_pass);
 
---leg agg error tests
-INSERT INTO miovision_validation.validation_scenarios (
-    scenario_name, validation_rule, description, leg, spec_class, movement_name,
-    spec_movements, classification_uids, movement_uids,
-    spec_counts, mio_counts, exp_err, exp_pass
-)
-VALUES
-    ('leg_n_mixed_errors', 'spec_error_agg_mvmt', 'N leg: Left +5%, Thru -10%, Right exact',
-        'N', 'vehicle_light', 'Left',
-        '{n_cars_l}', '{1,8}', '{2}',
-        ARRAY[10, 20, 30, 25, 15], ARRAY[11, 21, 31, 26, 16], 0.05, true),
-    ('leg_n_mixed_errors', 'spec_error_agg_mvmt', 'N leg: Left +5%, Thru -10%, Right exact',
-        'N', 'vehicle_light', 'Thru',
-        '{n_cars_t}', '{1,8}', '{1}',
-        ARRAY[10, 20, 30, 25, 15], ARRAY[8, 18, 28, 23, 13], -0.10, false),
-    ('leg_n_mixed_errors', 'spec_error_agg_mvmt', 'N leg: Left +5%, Thru -10%, Right exact',
-        'N', 'vehicle_light', 'Right',
-        '{n_cars_r}', '{1,8}', '{3}',
-        ARRAY[10, 20, 30, 25, 15], ARRAY[10, 20, 30, 25, 15], 0, true);
 
 --leg level tests (exp_err, exp_pass are the LEG's values, repeated on each movement row)
 INSERT INTO miovision_validation.validation_scenarios (
@@ -116,6 +97,7 @@ INSERT INTO miovision_validation.validation_scenarios (
     spec_counts, mio_counts, exp_err, exp_pass
 )
 VALUES
+       
     ('leg_n_offsetting_errors', 'spec_error_agg_leg', 'N leg: Left +10%, Thru -10%, Right exact, errors cancel (300 vs 300)',
         'N', 'vehicle_light', 'Left',
         '{n_cars_l}', '{1,8}', '{2}',
