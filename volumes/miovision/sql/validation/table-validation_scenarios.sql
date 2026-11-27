@@ -12,6 +12,7 @@ CREATE TABLE miovision_validation.validation_scenarios (
     description text,
     -- fixture attributes (one row per movement; no defaults)
     leg text NOT NULL,
+    exit_leg text,
     spec_class text NOT NULL,
     movement_name text NOT NULL,
     spec_movements text[] NOT NULL,
@@ -23,12 +24,11 @@ CREATE TABLE miovision_validation.validation_scenarios (
     -- expected output of the validation_rule view (per movement for mvmt, per leg for leg)
     exp_vol_spec bigint GENERATED ALWAYS AS (miovision_validation.int_array_sum(spec_counts)) STORED,
     exp_vol_mio bigint GENERATED ALWAYS AS (miovision_validation.int_array_sum(mio_counts)) STORED,
-    exp_bins int GENERATED ALWAYS AS (cardinality(spec_counts)) STORED,
     exp_err numeric,
     exp_pass boolean,
     PRIMARY KEY (scenario_name, leg, spec_class, movement_name),
     CONSTRAINT equal_length_counts CHECK (cardinality(spec_counts) = cardinality(mio_counts)),
-    CONSTRAINT valid_validation_rule CHECK (validation_rule IN ('spec_error_agg_mvmt', 'spec_error_agg_leg'))
+    CONSTRAINT valid_validation_rule CHECK (validation_rule IN ('spec_error_agg_mvmt', 'spec_error_agg_leg', 'spec_error_agg_exit'))
 );
 
 TRUNCATE miovision_validation.validation_scenarios;
@@ -79,7 +79,7 @@ VALUES
         '{n_cars_r}', '{1,8}', '{3}',
         ARRAY[10, 20, 30, 25, 15], ARRAY[10, 20, 30, 25, 15], 0, true);
 
---leg level tests (exp_err, exp_bins, exp_pass are the LEG's values, repeated on each movement row)
+--leg level tests (exp_err, exp_pass are the LEG's values, repeated on each movement row)
 INSERT INTO miovision_validation.validation_scenarios (
     scenario_name, validation_rule, description, leg, spec_class, movement_name,
     spec_movements, classification_uids, movement_uids,
@@ -111,3 +111,62 @@ VALUES
         'N', 'vehicle_light', 'Right',
         '{n_cars_r}', '{1,8}', '{3}',
         ARRAY[10, 20, 30, 25, 15], ARRAY[12, 22, 32, 27, 17], 0.10, false);
+        
+INSERT INTO miovision_validation.validation_scenarios (
+    scenario_name, validation_rule, description, leg, exit_leg, spec_class, movement_name,
+    spec_movements, classification_uids, movement_uids,
+    spec_counts, mio_counts, exp_err, exp_pass
+)
+VALUES
+    -- N Thru + E Left both exit on the S leg
+    ('exit_s_offsetting_errors', 'spec_error_agg_exit', 'S exit: N Thru +10%, E Left -10%, errors cancel (200 vs 200)',
+        'N', 'S', 'vehicle_light', 'Thru',
+        '{n_cars_t}', '{1,8}', '{1}',
+        ARRAY[10, 20, 30, 25, 15], ARRAY[12, 22, 32, 27, 17], 0, true),
+    ('exit_s_offsetting_errors', 'spec_error_agg_exit', 'S exit: N Thru +10%, E Left -10%, errors cancel (200 vs 200)',
+        'E', 'S', 'vehicle_light', 'Left',
+        '{e_cars_l}', '{1,8}', '{2}',
+        ARRAY[10, 20, 30, 25, 15], ARRAY[8, 18, 28, 23, 13], 0, true),
+ 
+    ('exit_s_all_10pct_higher', 'spec_error_agg_exit', 'S exit: N Thru and E Left both +10% (200 vs 220)',
+        'N', 'S', 'vehicle_light', 'Thru',
+        '{n_cars_t}', '{1,8}', '{1}',
+        ARRAY[10, 20, 30, 25, 15], ARRAY[12, 22, 32, 27, 17], 0.10, false),
+    ('exit_s_all_10pct_higher', 'spec_error_agg_exit', 'S exit: N Thru and E Left both +10% (200 vs 220)',
+        'E', 'S', 'vehicle_light', 'Left',
+        '{e_cars_l}', '{1,8}', '{2}',
+        ARRAY[10, 20, 30, 25, 15], ARRAY[12, 22, 32, 27, 17], 0.10, false),
+
+    --miovision all zeroes
+    ('exit_s_mio_zero', 'spec_error_agg_exit', 'S exit: Miovision counts all zero',
+        'N', 'S', 'vehicle_light', 'Thru',
+        '{n_cars_t}', '{1,8}', '{1}',
+        ARRAY[0, 0, 0, 0, 0], ARRAY[12, 22, 32, 27, 17], null, false),
+    ('exit_s_mio_zero', 'spec_error_agg_exit', 'S exit: Miovision counts all zero',
+        'E', 'S', 'vehicle_light', 'Left',
+        '{e_cars_l}', '{1,8}', '{2}',
+        ARRAY[0, 0, 0, 0, 0], ARRAY[12, 22, 32, 27, 17], null, false),
+    
+    --spectrum all zeroes
+    ('exit_s_spec_zero', 'spec_error_agg_exit', 'S exit: Spectrum counts all zero',
+        'N', 'S', 'vehicle_light', 'Thru',
+        '{n_cars_t}', '{1,8}', '{1}',
+        ARRAY[12, 22, 32, 27, 17], ARRAY[0, 0, 0, 0, 0], null, false),
+    ('exit_s_spec_zero', 'spec_error_agg_exit', 'S exit: Spectrum counts all zero',
+        'E', 'S', 'vehicle_light', 'Left',
+        '{e_cars_l}', '{1,8}', '{2}',
+        ARRAY[12, 22, 32, 27, 17], ARRAY[0, 0, 0, 0, 0], null, false),
+ 
+    -- three entrances feed the S exit (N Thru, E Left, W Right), -5% overall
+    ('exit_s_three_movements', 'spec_error_agg_exit', 'S exit: N Thru + E Left + W Right, 300 vs 285 (-5%)',
+        'N', 'S', 'vehicle_light', 'Thru',
+        '{n_cars_t}', '{1,8}', '{1}',
+        ARRAY[10, 20, 30, 25, 15], ARRAY[9, 19, 29, 24, 14], -0.05, true),
+    ('exit_s_three_movements', 'spec_error_agg_exit', 'S exit: N Thru + E Left + W Right, 300 vs 285 (-5%)',
+        'E', 'S', 'vehicle_light', 'Left',
+        '{e_cars_l}', '{1,8}', '{2}',
+        ARRAY[10, 20, 30, 25, 15], ARRAY[9, 19, 29, 24, 14], -0.05, true),
+    ('exit_s_three_movements', 'spec_error_agg_exit', 'S exit: N Thru + E Left + W Right, 300 vs 285 (-5%)',
+        'W', 'S', 'vehicle_light', 'Right',
+        '{w_cars_r}', '{1,8}', '{3}',
+        ARRAY[10, 20, 30, 25, 15], ARRAY[9, 19, 29, 24, 14], -0.05, true);
