@@ -60,17 +60,50 @@ BEGIN
                         'vol_mio', v.vol_mio,
                         'aggregate_error_with_signs', round(v.aggregate_error_with_signs::numeric, 6),
                         'pass', v.pass) END AS got_json
-                FROM (
-                    SELECT * FROM miovision_validation.validation_scenarios
-                    WHERE scenario_name = sc.scenario_name
-                ) AS e
-                FULL JOIN (
-                    SELECT * FROM miovision_validation.spec_error_agg_mvmt
-                    WHERE (intersection_uid, count_id) = (-1, -1)
-                ) AS v
+                FROM miovision_validation.validation_scenarios AS e
+                FULL JOIN miovision_validation.spec_error_agg_mvmt AS v
                     ON v.leg = e.leg
                     AND v.classification = e.spec_class
                     AND v.movement = e.movement_name
+                    AND (v.intersection_uid, v.count_id) = (-1, -1)
+                WHERE e.scenario_name = sc.scenario_name
+                ORDER BY 2, 3, 4
+            LOOP
+                scenario := sc.scenario_name;
+                validation_rule := sc.validation_rule;
+                leg := r.leg;
+                classification := r.classification;
+                movement := r.movement;
+                expected := r.exp_json;
+                got := r.got_json;
+                passed := r.exp_json IS NOT NULL AND r.got_json IS NOT NULL AND r.exp_json = r.got_json;
+                RETURN NEXT;
+            END LOOP;
+
+        ELSIF sc.validation_rule = 'spec_error_percentile_mvmt' THEN
+            FOR r IN
+                SELECT
+                    e.scenario_name AS e_scenario,
+                    coalesce(e.leg, v.leg) AS leg,
+                    coalesce(e.spec_class, v.classification) AS classification,
+                    coalesce(e.movement_name, v.movement) AS movement,
+                    CASE WHEN e.scenario_name IS NOT NULL THEN jsonb_build_object(
+                        'vol_spec', e.exp_vol_spec,
+                        'vol_mio', e.exp_vol_mio,
+                        'percentile_80_r', round(e.exp_err, 6),
+                        'pass', e.exp_pass) END AS exp_json,
+                    CASE WHEN v.leg IS NOT NULL THEN jsonb_build_object(
+                        'vol_spec', v.vol_spec,
+                        'vol_mio', v.vol_mio,
+                        'percentile_80_r', round(v.percentile_80_r::numeric, 6),
+                        'pass', v.pass_80th_percentile_r) END AS got_json
+                FROM miovision_validation.validation_scenarios AS e
+                FULL JOIN miovision_validation.spec_error_percentile_mvmt AS v
+                    ON v.leg = e.leg
+                    AND v.classification = e.spec_class
+                    AND v.movement = e.movement_name
+                    AND (v.intersection_uid, v.count_id) = (-1, -1)
+                WHERE e.scenario_name = sc.scenario_name
                 ORDER BY 2, 3, 4
             LOOP
                 scenario := sc.scenario_name;
@@ -86,6 +119,25 @@ BEGIN
 
         ELSIF sc.validation_rule = 'spec_error_agg_exit' THEN
             FOR r IN
+                WITH validation_scenario AS (
+                    SELECT
+                        scenario_name,
+                        exit_leg,
+                        spec_class,
+                        exp_err,
+                        exp_pass,
+                        sum(exp_vol_spec) AS exp_vol_spec,
+                        sum(exp_vol_mio) AS exp_vol_mio
+                    FROM miovision_validation.validation_scenarios
+                    WHERE scenario_name = sc.scenario_name
+                    GROUP BY
+                        scenario_name,
+                        exit_leg,
+                        spec_class,
+                        exp_err,
+                        exp_pass
+                )
+
                 SELECT
                     e.scenario_name AS e_scenario,
                     coalesce(e.exit_leg, v.leg) AS leg,
@@ -100,30 +152,11 @@ BEGIN
                         'vol_mio', v.vol_mio,
                         'aggregate_error_with_signs', round(v.aggregate_error_with_signs::numeric, 6),
                         'pass', v.pass) END AS got_json
-                FROM (
-                    SELECT
-                        validation_scenarios.scenario_name,
-                        validation_scenarios.exit_leg,
-                        validation_scenarios.spec_class,
-                        validation_scenarios.exp_err,
-                        validation_scenarios.exp_pass,
-                        sum(validation_scenarios.exp_vol_spec) AS exp_vol_spec,
-                        sum(validation_scenarios.exp_vol_mio) AS exp_vol_mio
-                    FROM miovision_validation.validation_scenarios
-                    WHERE validation_scenarios.scenario_name = sc.scenario_name
-                    GROUP BY
-                        validation_scenarios.scenario_name,
-                        validation_scenarios.exit_leg,
-                        validation_scenarios.spec_class,
-                        validation_scenarios.exp_err,
-                        validation_scenarios.exp_pass
-                ) AS e
-                FULL JOIN (
-                    SELECT * FROM miovision_validation.spec_error_agg_exit
-                    WHERE (intersection_uid, count_id) = (-1, -1)
-                ) AS v
+                FROM validation_scenario
+                FULL JOIN miovision_validation.spec_error_agg_exit AS v
                     ON v.leg = e.exit_leg
                     AND v.classification = e.spec_class
+                    AND (v.intersection_uid, v.count_id) = (-1, -1)
                 ORDER BY 2, 3
             LOOP
                 scenario := sc.scenario_name;
@@ -139,6 +172,29 @@ BEGIN
             
         ELSIF sc.validation_rule = 'spec_error_agg_leg' THEN
             FOR r IN
+                WITH validation_scenario AS (
+                    SELECT
+                        scenario_name,
+                        description,
+                        leg,
+                        spec_class,
+                        classification_uids,
+                        exp_err,
+                        exp_pass,
+                        sum(exp_vol_spec) AS exp_vol_spec,
+                        sum(exp_vol_mio) AS exp_vol_mio
+                    FROM miovision_validation.validation_scenarios
+                    WHERE scenario_name = sc.scenario_name
+                    GROUP BY
+                        scenario_name,
+                        description,
+                        leg,
+                        spec_class,
+                        classification_uids,
+                        exp_err,
+                        exp_pass
+                )
+
                 SELECT
                     e.scenario_name AS e_scenario,
                     coalesce(e.leg, v.leg) AS leg,
@@ -153,34 +209,11 @@ BEGIN
                         'vol_mio', v.vol_mio,
                         'aggregate_error_with_signs', round(v.aggregate_error_with_signs::numeric, 6),
                         'pass', v.pass) END AS got_json
-                FROM (
-                    SELECT
-                        validation_scenarios.scenario_name,
-                        validation_scenarios.description,
-                        validation_scenarios.leg,
-                        validation_scenarios.spec_class,
-                        validation_scenarios.classification_uids,
-                        validation_scenarios.exp_err,
-                        validation_scenarios.exp_pass,
-                        sum(validation_scenarios.exp_vol_spec) AS exp_vol_spec,
-                        sum(validation_scenarios.exp_vol_mio) AS exp_vol_mio
-                    FROM miovision_validation.validation_scenarios
-                    WHERE validation_scenarios.scenario_name = sc.scenario_name
-                    GROUP BY
-                        validation_scenarios.scenario_name,
-                        validation_scenarios.description,
-                        validation_scenarios.leg,
-                        validation_scenarios.spec_class,
-                        validation_scenarios.classification_uids,
-                        validation_scenarios.exp_err,
-                        validation_scenarios.exp_pass
-                ) AS e
-                FULL JOIN (
-                    SELECT * FROM miovision_validation.spec_error_agg_leg
-                    WHERE (intersection_uid, count_id) = (-1, -1)
-                ) AS v
+                FROM validation_scenario AS e
+                FULL JOIN miovision_validation.spec_error_agg_leg AS v
                     ON v.leg = e.leg
                     AND v.classification = e.spec_class
+                    AND (v.intersection_uid, v.count_id) = (-1, -1)
                 ORDER BY 2, 3
             LOOP
                 scenario := sc.scenario_name;
