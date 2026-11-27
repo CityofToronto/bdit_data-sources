@@ -136,7 +136,7 @@ def enforce_date_format(date, fuzzy=False):
     :param date: str, string to check for date
     :param fuzzy: bool, ignore unknown tokens in string if True
     """
-    LOGGER.info("Input date: " + date)
+    LOGGER.debug("Input date: " + date)
     # clean date string to ensure there is a space after commas so that dateutil parse works properly
     date = " ".join(date.strip().replace(",", ", ").split())
     if date == '':
@@ -144,7 +144,7 @@ def enforce_date_format(date, fuzzy=False):
     else:
         parsed_date = parse(date, fuzzy=fuzzy)
         formatted_date = parsed_date.strftime("%B %-d, %Y")
-        LOGGER.info("Output date: " + formatted_date)
+        LOGGER.debug("Output date: " + formatted_date)
         return formatted_date
 
 def is_int(n):
@@ -199,8 +199,8 @@ def pull_from_sheet(
     are not included in the postgres table.
     The existing table on postgres will be truncated first prior to inserting data into it.
     
-    UPDATE: The new function will be doing upsert on the existing table, based on school_name.
-            There will be no truncating.
+    The new function does not upsert on the existing table, based on school_name, but this might
+    be a good upgrade for the future.
 
     Note
     ----
