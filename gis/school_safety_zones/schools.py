@@ -21,7 +21,7 @@ from shapely.geometry import Point
 
 import click
 import configparser
-from sqlalchemy import create_engine, Table, Column, MetaData, delete
+from sqlalchemy import create_engine, Table, Column, MetaData, delete, inspect, Text
 from sqlalchemy.engine import URL
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 from googleapiclient.discovery import build
@@ -136,12 +136,15 @@ def enforce_date_format(date, fuzzy=False):
     :param date: str, string to check for date
     :param fuzzy: bool, ignore unknown tokens in string if True
     """
-    date = date.strip()
+    LOGGER.info("Input date: " + date)
+    # clean date string to ensure there is a space after commas so that dateutil parse works properly
+    date = " ".join(date.strip().replace(",", ", ").split())
     if date == '':
         return date
     else:
         parsed_date = parse(date, fuzzy=fuzzy)
         formatted_date = parsed_date.strftime("%B %-d, %Y")
+        LOGGER.info("Output date: " + formatted_date)
         return formatted_date
 
 def is_int(n):
@@ -207,7 +210,7 @@ def pull_from_sheet(
         engine: Connection to bigdata database.
         service: Credentials to access google sheets.
         year: Indicates which year of data is being worked on.
-        spreadsheet_id: The iD iof the Google spreadsheet containing raw data.
+        spreadsheet_id: The ID of the Google spreadsheet containing raw data.
         spreadsheet_range: The range of data within the spreadsheet.
         schema: PostgreSQL schema to load the data into.
         table: PostgreSQL table to load the data into.
@@ -261,10 +264,11 @@ def pull_from_sheet(
         return False
     
     metadata = MetaData(schema = schema)
-    t = Table(
-        table,
-        metadata,
-        *[Column(c) for c in [
+
+    # column types are all Text
+    columns = [
+        Column(col, Text)
+        for col in [
             "school_name",
             "address",
             "work_order_fb",
@@ -273,9 +277,23 @@ def pull_from_sheet(
             "final_sign_installation",
             "locations_fb",
             "locations_wyss"
-            ]
         ]
+    ]
+
+    t = Table(
+        table,
+        metadata,
+        *columns
     )
+
+    # check if table exists, create table if it does not exist
+    insp = inspect(engine)
+
+    if not insp.has_table(table, schema=schema):
+        LOGGER.info("Creating table %s.%s", schema, table)
+        metadata.create_all(engine)
+
+    # truncate table and insert rows
     truncate_stmt = delete(t)
     insert_stmt = t.insert().values(rows)
     with engine.connect() as conn:
@@ -284,6 +302,7 @@ def pull_from_sheet(
         LOGGER.info('Uploading %s rows to PostgreSQL', len(rows))
         LOGGER.debug(rows)
         conn.execute(insert_stmt)
+        conn.commit() # commit table changes
 
     LOGGER.info('Table %s is done', table)
     return status
