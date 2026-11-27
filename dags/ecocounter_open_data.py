@@ -8,6 +8,8 @@ import logging
 import pendulum
 from functools import partial
 
+from slack_sdk import WebClient
+
 from airflow.sdk.bases.hook import BaseHook
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.standard.sensors.date_time import DateTimeSensor
@@ -18,8 +20,10 @@ try:
     repo_path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     sys.path.insert(0, repo_path)
     from dags.dag_owners import owners
-    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, send_slack_msg, get_readme_docmd
+    from bdit_dag_utils.utils.dag_functions import task_fail_slack_alert, slack_alert_data_quality, send_slack_msg, get_readme_docmd
     from bdit_dag_utils.utils.custom_operators import SQLCheckOperatorWithReturnValue
+    from bdit_dag_utils.utils.send_slack_imgs import send_msg_with_images
+    from volumes.ecocounter.data_checks.create_data_spike_graphs import create_data_spike_graphs
 except ModuleNotFoundError:
     raise ImportError("Cannot import DAG helper functions.")
 except ImportError:
@@ -34,6 +38,15 @@ DAG_OWNERS = owners.get(DAG_NAME, ["Unknown"])
 README_PATH = os.path.join(repo_path, 'volumes/ecocounter/readme.md')
 DOC_MD = get_readme_docmd(README_PATH, DAG_NAME)
 EXPORT_PATH = '/home/airflow/open_data/permanent-bike-counters' #'/data/open_data/permanent-bike-counters'
+GRAPH_EXPORT_PATH = '/home/airflow/open_data/ecocounter_temp' # path to place + retrieve graphs
+
+# We will wipe this folder every month rather than have it balloon
+for filename in os.listdir(GRAPH_EXPORT_PATH):
+    filepath = os.path.join(GRAPH_EXPORT_PATH, filename)
+
+    if os.path.isfile(filepath):
+        os.remove(filepath)
+
 BASH_ENV = {
     'HOST': '{{ conn.ecocounter_bot.host }}',
     'LOGIN': '{{ conn.ecocounter_bot.login }}',
@@ -50,7 +63,7 @@ default_args = {
     'email_on_success': False,
     'retries': 0,
     'retry_delay': timedelta(minutes=5),
-    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = True),
+    'on_failure_callback': partial(task_fail_slack_alert, use_proxy = False),
 }
 
 @dag(
@@ -93,6 +106,45 @@ def ecocounter_open_data_dag():
     wait_till_10th.doc_md = """
     Wait until the 10th day of the month to export data. Alternatively mark task as success to proceed immediately.
     """
+
+    check_anomalous_ranges = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=partial(slack_alert_data_quality, use_proxy=True, channel="slack_prj_permanent_sensors"),
+            task_id="check_anomalous_ranges",
+            sql=f"SELECT * FROM ecocounter.open_data_anomalous_ranges_check()",
+            conn_id="ecocounter_bot",
+            trigger_rule='all_done'
+        )
+    check_anomalous_ranges.doc_md = '''
+    Flag any counts in the open_data tables which fall within ecocounter.anomalous_ranges
+    '''
+
+    check_previous_years = SQLCheckOperatorWithReturnValue(
+            on_failure_callback=partial(slack_alert_data_quality, use_proxy=True, channel="slack_prj_permanent_sensors"),
+            task_id="check_previous_years",
+            sql=f"SELECT * FROM ecocounter.open_data_previous_years_check()",
+            conn_id="ecocounter_bot",
+            trigger_rule='all_done'
+        )
+    check_previous_years.doc_md = '''
+    Flag any changes which occured in the last month and would require the DAG to be run for previous years
+    '''
+
+    @task(trigger_rule='all_done', doc_md="""Check for any data spikes or 0 volumes in the past two months and create and save relevant graphs.""")
+    def check_data_spikes(**context):
+
+        # prepare slack connection
+        proxy = f"http://{BaseHook.get_connection('slack').password}@proxy.toronto.ca:8080"
+        SLACK_TOKEN = BaseHook.get_connection("slack_token").password
+        client = WebClient(token=SLACK_TOKEN, proxy=proxy)
+        CHANNEL_ID = Variable.get(
+                "slack_channels", deserialize_json=True
+            ).get("prj_permanent_sensors")
+ 
+        file_list = create_data_spike_graphs(conn_id="ecocounter_bot", outpath=GRAPH_EXPORT_PATH)
+
+        msg=f":eco-counter: Ecocounter QC visualizations ready, fresh from the oven :cook:. Please check the {len(file_list)} visualizations saved at {GRAPH_EXPORT_PATH} prior to publication. :eco-counter:"
+        
+        send_msg_with_images(client, file_list, msg, CHANNEL_ID)
     
     @task()
     def get_years(ds=None):
@@ -213,6 +265,9 @@ def ecocounter_open_data_dag():
     (
         check_data_availability >>
         reminder_message() >>
+        check_anomalous_ranges >>
+        check_previous_years >>
+        check_data_spikes() >>
         wait_till_10th >> [
             insert_and_download_data.expand(yr = yrs),
             output_readme()
